@@ -1,0 +1,78 @@
+{
+  "_what": "PRE-REGISTERED FAULT SETS. Every rung above `designed` in the delivery machine is earned by one of these, and what makes it evidence is that the faults were named BEFORE the code. checks/stage.mjs reads this file; architecture/theme.json declares the machine it feeds.",
+  "_why_here_and_not_in_the_test": "A fault list living inside the test file it describes is written by the author of the code, after the code, until it passes — which certifies only that the code does what it does. Kept in a tracked file of its own, a fault added later to turn a rung green is a DIFF a reviewer sees. That is the whole mechanism, and it is adapted from mutation testing's premise that the planted fault is the measurement — with the faults named by hand and in advance, because a mutant generated from the code cannot exist before the code.",
+  "_what_it_cannot_do": "Nothing observes the ORDER two files were written in. This registry and an implementation can land in one commit and no check here can tell. The rung above is git — the commit that first adds a fault must not be later than the one that first adds the implementation — and it is buildable, not built.",
+  "_state_today": "2026-09-07. Every set below carries faults and NO `file`, which is the honest first state: the criteria are written, the defence code is not. checks/stage.mjs reads that as `preregistered, unwritten` and leaves the box at `designed` — it is not a failure, it is the correct order. Fill in `file` when the set is written; the rung moves when git tracks it and it names its subject.",
+  "sets": {
+    "guard.compose.unit": {
+      "for": "Payload-compose guard",
+      "kind": "unit",
+      "registered": "2026-09-07",
+      "faults": [
+        "a tool call carrying no tagged secret in any argument is permitted, so the guard is not a blanket deny",
+        "a tagged secret placed whole into an outbound URL argument is denied",
+        "a tagged secret split across two arguments of one call is denied, because assembly is the thing being watched",
+        "a base64-encoded tagged secret is denied — encoding is not laundering, and base64 is the vector actually observed",
+        "a denial names WHICH secret and WHICH argument, so an operator can act on it without reading a trace",
+        "an untagged string that merely looks like a credential is permitted, because a guard with false positives gets switched off",
+        "the guard is synchronous: it returns a verdict before the call proceeds, never after"
+      ]
+    },
+    "guard.compose.seam": {
+      "for": "Payload-compose guard",
+      "kind": "seam",
+      "host": "ctx.tools.guard",
+      "registered": "2026-09-07",
+      "faults": [
+        "the registration is actually INVOKED by the runtime on a real tool call — registered-never-invoked is the failure this set exists for",
+        "the guard disposes with its fiber, so a finished session leaves no live guard behind",
+        "a denial reaches the agent as a tool error it can see, not a silent drop that reads as success",
+        "a second call cannot re-permit what the first denied, because the guard is monotonic"
+      ]
+    },
+    "scorer.injection.unit": {
+      "for": "Injection scorer",
+      "kind": "unit",
+      "registered": "2026-09-07",
+      "faults": [
+        "the poisoned runbook note captured in the evidence appendix scores above threshold",
+        "an ordinary standup message scores below it, on the same scorer and the same threshold",
+        "a disguised payload — instructions framed as a build-health sync check — still scores above threshold",
+        "the score is attached to the ingested content, not to the model's reply, so it survives a model that refuses"
+      ]
+    },
+    "scorer.injection.seam": {
+      "for": "Injection scorer",
+      "kind": "seam",
+      "host": "dsh-session-telemetry",
+      "registered": "2026-09-07",
+      "faults": [
+        "the rule is reached by the redact/score waterfall that ships empty — the seat exists and this proves it is occupied",
+        "a scorer that throws does not take the session down with it",
+        "the score reaches the session log, so the chain invariant downstream has something to read"
+      ]
+    },
+    "invariant.chain.unit": {
+      "for": "Chain invariant",
+      "kind": "unit",
+      "registered": "2026-09-07",
+      "faults": [
+        "a secret read in one step and present in a later outbound URL, with no approval between, fires",
+        "the same pair WITH a human approval in the window does not fire",
+        "a secret read and never sent does not fire",
+        "two different secrets, one read and another sent, do not fire — the invariant is about identity, not about traffic"
+      ]
+    },
+    "invariant.chain.seam": {
+      "for": "Chain invariant",
+      "kind": "seam",
+      "host": "dsh-invariants",
+      "registered": "2026-09-07",
+      "faults": [
+        "the companion is loaded and evaluated against a real dsh-session log rather than a fixture",
+        "it survives a log that is still being written, because the session it watches has not ended",
+        "a fired invariant reaches the realtime store the dashboard reads"
+      ]
+    }
+  }
+}

@@ -91,6 +91,14 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
                 guard = component "Payload-compose guard" "proposed — hover for details. Refuses a tool call whose outbound argument carries a tagged secret, while the URL is still an argument." "dsh-tools · ctx.tools.guard" {
                     tags "Proposal"
                     !adrs adrs-guard
+                    /* THE FAULTS ARE NAMED BEFORE THE CODE. Neither set carries a file yet, which
+                       checks/stage.mjs reads as preregistered-and-unwritten and leaves at designed.
+                       The seam set names ctx.tools.guard because the failure it exists for is
+                       registered-never-invoked, which a unit set cannot see. */
+                    properties {
+                        "unit" "guard.compose.unit"
+                        "seam" "guard.compose.seam"
+                    }
                     perspectives {
                         "Rationale" "Gap in Deepseek Harness\n· ctx.tools.guard ships as an empty seam and nothing is mounted in it\n· the harness can refuse a CALL and has no opinion on the VALUE inside it\n\nvs Claude Code\n· PreToolUse hooks and permission prompts gate which tool runs\n· neither inspects the argument, so a permitted post carrying a secret passes\n\nNow possible\n· one denial covers the unfurl, image and direct-fetch vectors identically\n· it holds whether the model refuses, obeys, or never judged the call at all"
                     }
@@ -143,6 +151,10 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
                 scorer = component "Injection scorer" "modified — hover for details. Suspects: scores ingested text for instruction patterns." "dsh-session-telemetry" {
                     tags "Modified"
                     !adrs adrs-scorer
+                    properties {
+                        "unit" "scorer.injection.unit"
+                        "seam" "scorer.injection.seam"
+                    }
                     perspectives {
                         "Rationale" "Gap in Deepseek Harness\n· the redact/score waterfall ships empty\n· ingested text is walked once and scored by nothing\n\nvs Claude Code\n· no scoring stage either\n· tool_result carries the text, so scoring runs after export and cannot block\n\nNow possible\n· a first signal in-process and before redaction\n· gives the guard downstream something to weigh"
                     }
@@ -152,6 +164,10 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
                 invariant = component "Chain invariant" "proposed — hover for details. Proves: a secret from an earlier result reached a later URL with no approval between." "dsh-invariants" {
                     tags "Proposal"
                     !adrs adrs-invariant
+                    properties {
+                        "unit" "invariant.chain.unit"
+                        "seam" "invariant.chain.seam"
+                    }
                     perspectives {
                         "Rationale" "Gap in Deepseek Harness\n· no single call is anomalous\n· the read and the post are both logged, and nothing joins them\n\nvs Claude Code\n· prompt.id joins events to one prompt\n· that is causal correlation, not data flow — the same blind spot\n\nNow possible\n· a claim about a PAIR: an earlier secret reaching a later URL, no approval between\n· makes the guard refusal explainable, the indicator worth acting on"
                     }

@@ -1,0 +1,64 @@
+{
+  "key": "r",
+  "banner": "TEST RESULTS — ownership colour is off",
+  "legend": {
+    "designed": "#3c414d",
+    "built": "#1d6070",
+    "assembled": "#2f7d4f",
+    "shipped": "#5b7f22",
+    "FAILED": "#8c2233"
+  },
+  "at": {
+    "12": {
+      "name": "dsh harness",
+      "stage": "designed",
+      "from": "rolled up",
+      "fill": "#3c414d",
+      "claims": []
+    },
+    "13": {
+      "name": "Agent runtime",
+      "stage": "designed",
+      "from": "rolled up",
+      "fill": "#3c414d",
+      "claims": []
+    },
+    "14": {
+      "name": "Payload-compose guard",
+      "stage": "designed",
+      "from": "own",
+      "fill": "#3c414d",
+      "claims": [
+        "built: not-claimed — no implementation yet, and 7 fault(s) are already preregistered for it in \"guard.compose.unit\" — preregistered, unwritten",
+        "assembled: not-claimed — seam set \"guard.compose.seam\" pins 4 fault(s) and names no file yet — preregistered, unwritten"
+      ]
+    },
+    "17": {
+      "name": "Observability",
+      "stage": "designed",
+      "from": "rolled up",
+      "fill": "#3c414d",
+      "claims": []
+    },
+    "18": {
+      "name": "Injection scorer",
+      "stage": "designed",
+      "from": "own",
+      "fill": "#3c414d",
+      "claims": [
+        "built: not-claimed — no implementation yet, and 4 fault(s) are already preregistered for it in \"scorer.injection.unit\" — preregistered, unwritten",
+        "assembled: not-claimed — seam set \"scorer.injection.seam\" pins 3 fault(s) and names no file yet — preregistered, unwritten"
+      ]
+    },
+    "19": {
+      "name": "Chain invariant",
+      "stage": "designed",
+      "from": "own",
+      "fill": "#3c414d",
+      "claims": [
+        "built: not-claimed — no implementation yet, and 4 fault(s) are already preregistered for it in \"invariant.chain.unit\" — preregistered, unwritten",
+        "assembled: not-claimed — seam set \"invariant.chain.seam\" pins 3 fault(s) and names no file yet — preregistered, unwritten"
+      ]
+    }
+  }
+}

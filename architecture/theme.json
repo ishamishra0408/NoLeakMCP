@@ -143,35 +143,66 @@
   ],
   "_noClaim_why": "Rows that say WHERE something runs rather than whether we own it. A frame and an instance are both placements; the renderer resolves an instance from the element it instances, so a hue here would overwrite that answer with a false one.",
   "delivery": {
-    "_what": "The delivery state of one component, as a MACHINE rather than a two-value tag. The shape is adapted from design-loop core/machines.json, which pairs every state with what makes it OBSERVABLE — the fact on disk that proves a thing is in it. A tag nobody can check is an assertion; a state with an observable is a measurement.",
+    "_what": "The delivery state of one component, as a MACHINE rather than a tag. The shape is adapted from design-loop core/machines.json, which pairs every state with what makes it OBSERVABLE — the fact on disk that proves a thing is in it. A tag nobody can check is an assertion; a state with an observable is a measurement.",
     "object": "component",
-    "states": [
-      "proposed",
-      "modified",
-      "built",
-      "shipped"
-    ],
-    "observable": {
-      "proposed": "an ADR beside it and no file in the repo that implements it — the argument exists, the code does not",
-      "modified": "an extension point that already ships, carrying a rule of ours — the seam is theirs, the content is ours",
-      "built": "a tracked file in the repo implements it, and its control runs",
-      "shipped": "merged on the default branch of the repo that owns the seam"
+    "_axes": "TWO AXES, NOT ONE LIST, and the single list was a defect rather than an untidiness. `proposed` and `modified` answer DOES A SEAT EXIST — a cost question only a human can answer, because it is about somebody else's extension points. `built` and the rungs after it answer HOW FAR HAS IT GOT — a progress question the tree can answer without being asked. The two are orthogonal: the injection scorer is `existing` seat AND will one day be built. Under one array that element carries two states and trips checks/delivery.mjs's `two-states` rule, which is correct today and becomes a false positive the moment a marked component gets written. So seat is TAGGED and stage is DERIVED.",
+    "seat": {
+      "question": "does the thing we extend already have a place for this?",
+      "states": ["new", "existing"],
+      "observable": {
+        "new": "an ADR beside it and no extension point in the host that would take it — the harness must gain a seat before the code can sit in one",
+        "existing": "an extension point that already ships, carrying a rule of ours — the seam is theirs, the content is ours"
+      },
+      "guards": {
+        "new": "checks/delivery.mjs — a decision governs it, it is drawn in some view, and the word is in the description",
+        "existing": "checks/delivery.mjs — the same three, plus change-not-surfaced at every level above it"
+      },
+      "tagFor": { "new": "Proposal", "existing": "Modified" },
+      "_tagged_why": "Seat is TYPED because nothing in this tree can read the host's plugin registry and answer whether a seat exists. It is a claim about somebody else's code, so a human makes it and an ADR carries the argument."
     },
-    "guards": {
-      "proposed": "checks/delivery.mjs — an ADR governs it",
-      "modified": "checks/delivery.mjs — the state is styled and the word is in the description",
-      "built": "NOT BUILT — nothing yet joins a component to the file that implements it",
-      "shipped": "NOT BUILT — nothing yet reads the upstream default branch"
+    "stage": {
+      "question": "how far has it actually got?",
+      "states": ["designed", "built", "assembled", "shipped"],
+      "_derived_why": "STAGE IS NEVER TYPED. A tag reading `built` is a person asserting progress; a stage is the highest rung whose evidence holds. checks/stage.mjs computes it, and REFUSES an element that carries a stage word as a tag — because the moment progress can be typed it will be typed ahead of itself, which is the whole failure a state machine over a diagram exists to stop.",
+      "observable": {
+        "designed": "a decision beside it and no implementation claimed — the argument exists, the code does not",
+        "built": "the component names a TRACKED implementation file, and a preregistered redproof set that names that file holds every fault pinned for it",
+        "assembled": "a preregistered redproof set exercises the SEAM — our implementation and the host's own registration point in one run — and holds every fault pinned for it",
+        "shipped": "the implementation is on the default branch of the repo that owns the seam"
+      },
+      "guards": {
+        "designed": "checks/delivery.mjs — unstated-proposal",
+        "built": "checks/stage.mjs — implementation TRACKED in git, unit set registered in architecture/redproof.json, faults pinned, and the set file names the implementation",
+        "assembled": "checks/stage.mjs — seam set registered and pinned, and the set names BOTH our implementation and the host symbol it plugs into",
+        "shipped": "NOT BUILT — nothing here reads the default branch of a repo we do not own. The half that IS buildable is local: git merge-base --is-ancestor against this repo's own default branch. The upstream half needs their remote."
+      },
+      "_guards_why": "Three of the four are built and the fourth says NOT BUILT and why. A machine whose later rungs cannot be observed sits in its third rung forever and reads as progress; naming the gap is the difference between a roadmap and a claim.",
+      "_preregistered_why": "A TEST SET ALONE IS NOT A GUARD, and this is the whole substance of the two new rungs. A set written after the code, by the author of the code, to pass, certifies only that the code does what it does — which is what every repo already has. What makes a fault set evidence is that the faults were named BEFORE the fix. So architecture/redproof.json is a SEPARATE TRACKED artifact: a fault added later to turn a rung green is a diff to a registry, visible in review, rather than an invisible edit inside the test that reports on itself.",
+      "_preregistration_limit": "Nothing here can observe the ORDER two files were written in — the registry and the implementation can land in one commit. That is the same tier-D hole the review catalogue names for OSS-SEARCH, and it is stated rather than papered over. The rung above is git: the commit that first adds a fault to the registry must not be later than the one that first adds the implementation. Buildable, not built.",
+      "_seam_why": "The seam set is refused unless it names the HOST symbol as well as ours. A seam test that only exercises our own module is a unit test under a second name, and the failure it would miss is the one that actually happens to plugin architectures: registered, never invoked."
     },
-    "_guards_why": "Two of the four guards are NOT BUILT and say so. A machine whose later states cannot be observed is a machine that will sit forever in its third state and read as progress; naming the gap is the difference between a roadmap and a claim.",
-    "_styled": [
-      "proposed",
-      "modified"
-    ],
-    "_styled_why": "Only the two states that are OURS-and-not-yet-theirs carry a stroke. built and shipped are the resting states and take the ordinary palette: a diagram that highlighted everything finished would highlight everything.",
-    "tagFor": {
-      "proposed": "Proposal",
-      "modified": "Modified"
-    }
+    "properties": {
+      "implementation": "on the element — a repo-relative path to the file that implements this component. The ONE pointer out of the model, and the join that was missing: before it, nothing connected a box to code, so `built` had no observable at all and its guard said NOT BUILT.",
+      "unit": "on the element — the key of a set in architecture/redproof.json whose faults are this component's own behaviour",
+      "seam": "on the element — the key of a set in architecture/redproof.json whose faults are the JOIN between our code and the host's extension point",
+      "upstream": "on the element — owner/repo of the tree that owns the seam, for the shipped rung that is not built yet"
+    },
+    "_styled": ["new", "existing"],
+    "_styled_why": "AT REST the diagram draws SEAT only: hue is ownership, stroke-hue is seat, and there is no third channel left that survives colour vision deficiency and a black-and-white printer. Stage gets the FOURTH channel, which is time — an overlay under one key, off by default. Two meanings in the stroke at once makes both unreadable; two meanings the reader switches between makes neither.",
+    "overlay": {
+      "_what": "TEST RESULTS, on one key. While it is on, every fill is REPLACED by the stage the evidence supports, and the ownership ramp is off — so the banner is not decoration, it is the thing that stops a reader taking a green box for a system we do not own.",
+      "key": "r",
+      "banner": "TEST RESULTS — ownership colour is off",
+      "fill": {
+        "designed": "#3c414d",
+        "built": "#1d6070",
+        "assembled": "#2f7d4f",
+        "shipped": "#5b7f22",
+        "FAILED": "#8c2233"
+      },
+      "_fill_why": "designed is a neutral, not a warning: nothing claimed is not the same as something failing, and colouring it red would make the honest majority of a young model look broken. FAILED is the only red, and it means a CLAIM THAT DOES NOT HOLD — a named implementation git does not track, a set key absent from the registry, a fault count that has drifted. The ladder from designed to shipped rises in lightness so it survives the colour being removed, exactly as the ownership ramp does."
+    },
+    "tagFor": { "new": "Proposal", "existing": "Modified" },
+    "_tagFor_why": "MIRRORED FROM seat.tagFor so checks/delivery.mjs has one place to read the tagged vocabulary. It is the seat axis and nothing else; stage never appears here, because stage is never a tag."
   }
 }

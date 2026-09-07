@@ -550,6 +550,97 @@
 
     frame.addEventListener('load', tint);
 
+    /* ── TEST RESULTS, ON ONE KEY ────────────────────────────────────────────────────────────────
+       WHAT IT SHOWS. Every fill is replaced by the rung a component EARNED — designed, built,
+       assembled, or the red that means a claim does not hold. The ownership ramp is off while it is
+       on, which is why the banner is not decoration: without it a green box reads as a system we do
+       not own, and the two meanings would collide in the one channel the palette has left.
+
+       WHY TIME IS THE FOURTH CHANNEL. Hue is ownership and stroke-hue is seat; both are spent and
+       both survive colour blindness and a black-and-white printer, which is the constraint chapter
+       10 imposes on any scheme. There is no third simultaneous channel left. A toggle is a fourth
+       one that costs nothing, because the reader is never holding two meanings at once.
+
+       THE PAGE DOES NOT DECIDE ANYTHING. stage.json is written by checks/element-state.mjs --write
+       and carries a fill per element id, already rolled up the tree. Recomputing a rung here would
+       let the picture and the exit code disagree, which is the whole failure this machine exists to
+       stop — so the browser paints and nothing more. No payload means the key says so and does not
+       silently do nothing, because a key that appears inert is how a reader concludes a tool is
+       broken. */
+    let STAGE = null;
+    let stageOn = false;
+
+    /* THE RENDERER RECOLOURS ITS OWN ELEMENTS, and this asked it to rather than reaching past it.
+       The first version injected CSS at [model-id="<id>"], and that was wrong on a fact measured in
+       the live page: model-id is a UUID the renderer mints per cell, with no relation to the
+       workspace element id the export carries — the selector would have matched nothing, silently,
+       which is the worst way for an overlay to fail.
+       structurizr.diagram.changeColorOfElement(elementId, background) takes the WORKSPACE id, looks
+       it up in the renderer's own mapOfIdToBox, and derives the stroke through its shadeColor with
+       the dark-mode flag — so a repainted box keeps a stroke that belongs to its new fill instead of
+       one computed for the old one. refresh() puts every colour back from the workspace styles, so
+       turning the overlay off needs no record of what was there before. */
+    function paintStage() {
+      try {
+        const api = frame.contentWindow && frame.contentWindow.structurizr;
+        const dg = api && api.diagram;
+        if (!dg || typeof dg.changeColorOfElement !== 'function') return false;
+        if (!stageOn) { if (typeof dg.refresh === 'function') dg.refresh(); return true; }
+        if (!STAGE) return false;
+        /* COUNT WHAT THE PLATE ACTUALLY HOLDS, not the calls made. changeColorOfElement is silent
+           when the id is not on the current view, so counting calls would report a painted overlay on
+           a context plate that shows none of these boxes. The renderer already answers which elements
+           this view draws, so that is the denominator.
+           A NOTE ON VERIFYING THIS BY HAND: the renderer writes the new colour into the inline STYLE
+           and leaves the fill ATTRIBUTE at the original. Reading the attribute says nothing changed,
+           which is how this was briefly and wrongly diagnosed as a dead call. */
+        const drawn = new Set(((dg.getCurrentView() || {}).elements || []).map((e) => String(e.id)));
+        let painted = 0;
+        for (const id of Object.keys(STAGE.at || {})) {
+          const f = STAGE.at[id] && STAGE.at[id].fill;
+          if (!f) continue;
+          dg.changeColorOfElement(id, f);
+          if (drawn.has(String(id))) painted++;
+        }
+        return painted > 0;
+      } catch { return false; }
+    }
+
+    function sayStage() {
+      let b = document.getElementById('stage-banner');
+      if (!b) {
+        b = document.createElement('div');
+        b.id = 'stage-banner';
+        b.setAttribute('role', 'status');
+        /* AT THE BOTTOM, because the top belongs to the workspace name and the order bar and a
+           banner there hides both — measured on screen: the title and the step-order strip vanished
+           under it. A state notice that costs the reader the page heading is a bad trade. */
+        b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:40;padding:6px 12px;'
+          + 'font:600 13px/1.4 ui-sans-serif,system-ui,sans-serif;letter-spacing:.04em;text-align:center;'
+          + 'background:#8c2233;color:#fff';
+        document.body.appendChild(b);
+      }
+      b.hidden = !stageOn;
+      if (!stageOn) return;
+      if (!STAGE) { b.textContent = 'NO TEST RESULTS — run: node checks/element-state.mjs --root . --write'; return; }
+      if (!stagePainted) { b.textContent = 'TEST RESULTS COULD NOT BE PAINTED — the diagram did not expose changeColorOfElement'; return; }
+      /* THE LEGEND CARRIES ITS COLOURS. A row of state WORDS is not a key — the reader is looking
+         at fills and needs to map one to the other, which is chapter 10's rule that any notation is
+         described by a diagram key. The swatch is the key. */
+      const chips = Object.keys(STAGE.legend || {}).map((k) =>
+        '<span style="display:inline-flex;align-items:center;gap:5px;margin:0 9px">'
+        + '<i style="width:11px;height:11px;border-radius:2px;background:' + STAGE.legend[k] + ';display:inline-block"></i>'
+        + k + '</span>').join('');
+      b.innerHTML = '<b>' + (STAGE.banner || 'TEST RESULTS') + '</b>' + chips
+        + '<span style="opacity:.75">press ' + ((STAGE.key || 'r').toUpperCase()) + ' to go back</span>';
+    }
+
+    /* THE BANNER REPORTS WHAT ACTUALLY HAPPENED, not what was asked for. paintStage returns
+       whether it reached the renderer, so a key press that could not repaint says so instead of
+       leaving a reader looking at an unchanged plate under a banner claiming results are shown. */
+    let stagePainted = false;
+    function toggleStage() { stageOn = !stageOn; stagePainted = paintStage(); sayStage(); }
+
     const goto = (key) => { try { frame.contentWindow.location.hash = key; } catch { frame.src = SITE + '#' + key; } };
 
     /* ── DECISIONS: THE WHY, READ FROM THE FILE THAT STILL HAS IT ────────────────────────────────
@@ -778,6 +869,15 @@
     function onKey(e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const k = String(e.key).toLowerCase();
+      /* THE OVERLAY KEY IS HANDLED FIRST AND UNCONDITIONALLY, because it is a property of the
+         WORKSPACE and not of the view: a reader on a context plate wants it as much as one on a
+         component plate. The trace keys below are guarded by onTrace and would swallow it. */
+      /* THE KEY IS LIVE WITHOUT A PAYLOAD, and the first draft got this wrong in the way that
+         matters: it guarded on STAGE, so before the fetch returned — or in a repo that has never run
+         element-state --write — the key did NOTHING, silently. That is the exact failure the banner
+         exists to prevent, reintroduced one line above the banner. Measured in the live page: a press
+         three seconds after load fell through, because the payload had not arrived yet. */
+      if (k === String((STAGE && STAGE.key) || 'r').toLowerCase()) { toggleStage(); e.preventDefault(); return; }
       if (k !== 'n' && k !== 'b' && k !== 'escape') return;
       const onTrace = !!here && ROOTS.some(function look(n) { return (n.kind === 'Feature trace' && n.view === here) || n.children.some(look); });
       if (!onTrace) return;
@@ -1030,8 +1130,19 @@
       /* The heading is the workspace's own name, so the picture and its title cannot disagree. */
       if (ws.name) { document.querySelector('[data-title]').textContent = ws.name; document.title = ws.name; }
       body.dataset.railState = 'ready';
+      /* THE PAYLOAD IS OPTIONAL AND ITS ABSENCE IS AN ANSWER. A repo that has not run
+         element-state --write has no stage.json, and the key then says so rather than doing nothing. */
+      try {
+        const sres = await fetch(project + '/stage.json');
+        if (sres.ok) STAGE = await sres.json();
+      } catch { /* no results yet; the banner explains the key */ }
+
       const tick = () => {
         soften(); tint();
+        /* REPAINTED ON EVERY TICK for the same reason the tooltip is re-armed: the renderer rebuilds
+           its DOM when the plate changes, so an overlay applied once survives the first view and not
+           the second — which looks exactly like a toggle that works sometimes. */
+        if (stageOn) stagePainted = paintStage();
         /* ARMED ON EVERY TICK, not only on load. The renderer rebuilds its filter when the plate
            changes, and a rationale that survives the first view and not the second would look
            exactly like a tooltip that works sometimes — which is how this arrived here. */
