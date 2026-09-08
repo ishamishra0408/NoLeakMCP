@@ -47,4 +47,11 @@ eval/run.mjs      ──▶  eval/out/trials.jsonl           (trial outcomes)
 The bridge is stateless over the logs: delete the Convex data (`reset` mutation)
 and re-run `npm run backfill` to rebuild the projection from the authoritative log.
 
+> **Schema change (2026-09-08):** `events` gained optional `source` (`"arena"` | `"dsh"`)
+> and `runId`, mapped in `ingestEvent` / `ingestTrial`, so the dashboard can tag each row
+> and render the arena's `exfil/hit` LEAK rows. **The owner must run `cd realtime && npx
+> convex deploy`** for this to take effect on the live deployment. Both fields are optional,
+> so existing rows and the dsh bridge keep working unchanged; the arena server falls back to
+> the legacy trial shape if the deployment has not been updated yet.
+
 > **Requires Node 18+** (uses global fetch / AbortController / logical-assignment). `nvm use 20`. The base system Node may be older.

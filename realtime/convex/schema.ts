@@ -31,6 +31,8 @@ export default defineSchema({
     sample: v.optional(v.string()),
     session: v.optional(v.string()),
     callId: v.optional(v.string()),
+    source: v.optional(v.string()), // "arena" | "dsh" — where the event originated
+    runId: v.optional(v.string()),  // arena run / dsh session correlator
     key: v.optional(v.string()), // idempotency key (dedupe re-sends/backfills)
   })
     .index("by_ts", ["ts"])

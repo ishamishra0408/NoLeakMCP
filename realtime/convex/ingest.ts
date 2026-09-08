@@ -31,6 +31,8 @@ export const ingestEvent = mutation({
       sample: e.sample ?? undefined,
       session: e.agent ?? e.session ?? undefined,
       callId: e.callId ?? undefined,
+      source: e.source ?? undefined,
+      runId: e.runId ?? undefined,
       key: key ?? undefined,
     });
   },
@@ -50,6 +52,8 @@ export const ingestTrial = mutation({
     unevaluable: v.boolean(),
     ts: v.optional(v.number()),
     trialId: v.optional(v.string()),
+    source: v.optional(v.string()),
+    runId: v.optional(v.string()),
   },
   handler: async (ctx, a) => {
     if (a.trialId) {
@@ -65,6 +69,8 @@ export const ingestTrial = mutation({
       guard: a.guard,
       delivered: a.delivered,
       unevaluable: a.unevaluable,
+      source: a.source ?? undefined,
+      runId: a.runId ?? undefined,
       key: a.trialId ?? undefined,
     });
     if (a.unevaluable) return; // adrs-nebius: excluded from the denominator

@@ -23,6 +23,9 @@
   .feed { max-height:360px; overflow:auto; } .k { display:inline-block; min-width:118px; font-weight:600; }
   .k.deny { color:var(--bad); } .k.verdict { color:var(--amber); } .k.trial { color:var(--accent); }
   .pill { font-size:11px; padding:1px 7px; border-radius:20px; border:1px solid var(--line); color:var(--dim); }
+  .src { font-size:10px; padding:0 6px; border-radius:20px; border:1px solid var(--line); color:var(--dim); margin-left:6px; vertical-align:middle; }
+  .src.arena { color:var(--accent); border-color:var(--accent); } .src.dsh { color:var(--amber); border-color:var(--amber); }
+  .k.leak { color:var(--bad); } .arenaLink { margin-left:auto; }
   .setup { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:18px; }
   input { background:#0b0e14; border:1px solid var(--line); color:var(--ink); padding:7px 10px; border-radius:7px; width:min(420px,70vw); }
   button { background:var(--accent); color:#04121f; border:0; padding:7px 14px; border-radius:7px; font-weight:600; cursor:pointer; }
@@ -33,6 +36,7 @@
 <header>
   <h1>🛡️ No-Leak-MCP <span class="sub">live attack-success-rate · guard OFF vs ON</span></h1>
   <span id="conn" class="pill">connecting…</span>
+  <a id="arenaLink" class="arenaLink" href="#" target="_blank" rel="noopener" hidden>Try the arena →</a>
 </header>
 <div class="wrap">
   <div id="guardctl" class="setup" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -63,6 +67,13 @@
 
   const esc = (v) => String(v==null?"":v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const q = new URLSearchParams(location.search);
+
+  // "Try the arena →" link: ?arena=<url> wins, else this placeholder (owner: paste
+  // the deployed arena URL here after `render.yaml` deploys the noleak-arena service).
+  const ARENA_URL = ""; // e.g. "https://noleak-arena.onrender.com"
+  const arenaHref = q.get("arena") || ARENA_URL;
+  const arenaLink = document.getElementById("arenaLink");
+  if (arenaHref) { arenaLink.href = arenaHref; arenaLink.hidden = false; }
   const ls = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
   let url = q.get("url") || ls.get("convexUrl") || "https://good-firefly-220.convex.cloud";
   const conn = document.getElementById("conn");
@@ -130,13 +141,17 @@
     }, () => {});
 
     client.onUpdate(anyApi.metrics.feed, { limit: 60 }, (rows) => {
+      const srcPill = (e) => e.source ? ` <span class="src ${esc(e.source)}">${esc(e.source)}</span>` : "";
       const row = (e) => {
         const time = new Date(e.ts).toLocaleTimeString();
-        if (e.kind === "guard/deny") return `<tr><td><span class="k deny">DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · ${esc(e.how)} <span class="muted">${esc(e.marker)}</span></td></tr>`;
-        if (e.kind === "invariant/deny") return `<tr><td><span class="k deny">INV-DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · provenance · ${esc(e.how)}</td></tr>`;
-        if (e.kind === "scorer/verdict") return `<tr><td><span class="k verdict">${e.injection?"INJECTION":"clean"}</span> <span class="muted">${time}</span> ${esc(e.tool)} · score ${typeof e.score==="number"?e.score.toFixed(2):"?"} <span class="muted">${esc((e.labels||[]).join(", "))}</span></td></tr>`;
-        if (e.kind === "trial") return `<tr><td><span class="k trial">TRIAL</span> <span class="muted">${time}</span> ${esc(e.model)} · ${esc(e.style)} · guard ${esc(e.guard)} → ${e.delivered?"delivered":e.unevaluable?"unevaluable":"blocked"}</td></tr>`;
-        return `<tr><td class="muted">${time} ${esc(e.kind)}</td></tr>`;
+        const sp = srcPill(e);
+        if (e.kind === "guard/deny") return `<tr><td><span class="k deny">DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · ${esc(e.how)} <span class="muted">${esc(e.marker)}</span>${sp}</td></tr>`;
+        if (e.kind === "invariant/deny") return `<tr><td><span class="k deny">INV-DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · provenance · ${esc(e.how)}${sp}</td></tr>`;
+        if (e.kind === "exfil/hit") return `<tr><td><span class="k leak">LEAK</span> <span class="muted">${time}</span> canary reached the drop${e.tool?" · "+esc(e.tool):""}${e.how?" · "+esc(e.how):""}${sp}</td></tr>`;
+        if (e.kind === "scorer/verdict") return `<tr><td><span class="k verdict">${e.injection?"INJECTION":"clean"}</span> <span class="muted">${time}</span> ${esc(e.tool)} · score ${typeof e.score==="number"?e.score.toFixed(2):"?"} <span class="muted">${esc((e.labels||[]).join(", "))}</span>${sp}</td></tr>`;
+        if (e.kind === "trial") return `<tr><td><span class="k trial">TRIAL</span> <span class="muted">${time}</span> ${esc(e.model)} · ${esc(e.style)} · guard ${esc(e.guard)} → ${e.delivered?"delivered":e.unevaluable?"unevaluable":"blocked"}${sp}</td></tr>`;
+        if (e.kind && e.kind.indexOf("arena/") === 0) return `<tr><td><span class="k">${esc(e.kind.slice(6).toUpperCase())}</span> <span class="muted">${time}</span> ${esc(e.tool||"")}${sp}</td></tr>`;
+        return `<tr><td class="muted">${time} ${esc(e.kind)}${sp}</td></tr>`;
       };
       document.querySelector("#feed tbody").innerHTML = rows.map(row).join("") || `<tr><td class="muted">no events</td></tr>`;
     }, () => {});
