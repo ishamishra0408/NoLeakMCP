@@ -7,6 +7,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName } from "../render/arena/arena-core.mjs";
 import { createArenaServer } from "../render/arena/server.mjs";
+import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT } from "node:fs";
+import { dirname as dirnameT, join } from "node:path";
+import { fileURLToPath as fileURLToPathT } from "node:url";
+const REPO_ROOT_T = dirnameT(dirnameT(fileURLToPathT(import.meta.url)));
 
 // The scorer reads its key from the ENV (as the shipped plugin does). Dummy only;
 // every request is served by the fake fetch below — nothing leaves the process.
@@ -263,6 +267,36 @@ test("/ serves the website, /arena serves the arena UI, /assets/mark.svg is serv
     assert.match(mark.headers.get("content-type"), /image\/svg\+xml/);
     assert.equal((await fetch(url + "/assets/..%2F..%2Fpackage.json")).status, 404);
     assert.equal((await fetch(url + "/assets/server.mjs")).status, 404);
+  } finally { await app.close(); }
+});
+
+// The site has one drop-in slot: site/assets/slack-thread.png. When it is absent
+// the page ships the hand-built recreation and never requests the image; when the
+// owner drops it in, the server marks <body data-slack-shot="1"> and the page shows
+// the screenshot instead. Both directions are asserted here so a stale cache or a
+// dropped replace() cannot pass unnoticed. See site/BRAND.md.
+test("the Slack screenshot drop-in slot is detected server-side, both ways", async () => {
+  const shot = join(REPO_ROOT_T, "site", "assets", "slack-thread.png");
+  const preexisting = existsSyncT(shot);
+  const { app, url } = await boot();
+  try {
+    if (!preexisting) {
+      const without = await (await fetch(url + "/")).text();
+      assert.match(without, /<body>\n/, "plain <body> while the screenshot is absent");
+      assert.doesNotMatch(without, /<body data-slack-shot/, "no marker while the screenshot is absent");
+      assert.match(without, /figcap--recreation/, "the recreation caption ships");
+      // 1x1 transparent PNG — enough for existsSync; never rendered by the test.
+      writeFileSyncT(shot, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"));
+      const withShot = await (await fetch(url + "/")).text();
+      assert.match(withShot, /<body data-slack-shot="1">/, "marker set once the screenshot exists");
+      assert.match(withShot, /figcap--shot/, "the screenshot caption ships with it");
+      unlinkSyncT(shot);
+      const again = await (await fetch(url + "/")).text();
+      assert.doesNotMatch(again, /<body data-slack-shot/, "marker clears again — the cache keys on presence, not only mtime");
+    } else {
+      const withShot = await (await fetch(url + "/")).text();
+      assert.match(withShot, /<body data-slack-shot="1">/);
+    }
   } finally { await app.close(); }
 });
 

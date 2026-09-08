@@ -201,12 +201,24 @@ export function createArenaServer(o = {}) {
   const SITE_DIR = join(REPO_ROOT, "site");
   // Re-read when the file's mtime changes (one stat per request) so an edit to
   // the site never needs a restart; the arena UI keeps its boot-time cache.
-  let siteCache = { mtime: 0, body: null };
+  //
+  // The site has one drop-in slot: if the owner adds site/assets/slack-thread.png
+  // (a redacted screenshot of the planted Slack thread), the page should show it
+  // instead of the hand-built recreation. That is detected HERE, server-side, and
+  // signalled with a `data-slack-shot` attribute on <body>, so a page without the
+  // screenshot never issues a request for it (no 404 in the console). See
+  // site/BRAND.md, "Adding the real Slack screenshot".
+  let siteCache = { mtime: 0, shot: null, body: null };
   function siteHtml() {
     try {
       const f = join(SITE_DIR, "index.html");
       const m = statSync(f).mtimeMs;
-      if (m !== siteCache.mtime) siteCache = { mtime: m, body: readFileSync(f) };
+      const shot = existsSync(join(SITE_DIR, "assets", "slack-thread.png"));
+      if (m !== siteCache.mtime || shot !== siteCache.shot) {
+        let s = readFileSync(f, "utf8");
+        if (shot) s = s.replace("<body>", '<body data-slack-shot="1">');
+        siteCache = { mtime: m, shot, body: Buffer.from(s, "utf8") };
+      }
       return siteCache.body;
     } catch { return null; }
   }
