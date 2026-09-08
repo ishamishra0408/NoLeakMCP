@@ -70,6 +70,17 @@ Nothing above is submitted as event work.
   instantly. Four fixtures recorded from real Nebius runs (both models leak with defenses off; guard
   and invariant each deny with the matching toggle on). Honestly labelled throughout: simulated
   Slack + agent loop, real detectors, real Nebius model — **not dsh**.
+- Arena hardening + verification pass: **LEAKED now requires the drop to actually receive and decode
+  the canary** (unguessable run id; real `http_get` only ever hits this run's drop — SSRF guard;
+  new `EXFIL_ATTEMPTED` outcome + `GET /api/drop/:id` verification). Scorer runs at the true dsh seam
+  (only `mcp__slack__*` ingest results). Dependency-injected LLM/fetch/clock → `tests/arena.test.mjs`
+  (11 network-free tests: OFF→LEAKED, guard→DENIED, invariant→DENIED, MODEL_DECLINED, scorer
+  ingest-only, rate limiter 6-then-429, drop receipt + gated admin). Constant-time admin-secret
+  compare; last-hop `x-forwarded-for`; server refactored to an injectable factory. Convex `events`
+  gained optional `source`/`runId`; the dashboard tags each row (`arena`/`dsh` pill) and renders
+  `exfil/hit` LEAK rows + a "Try the arena →" link; the arena sends `source:"arena"`. Added
+  `render/arena/DEPLOY.md` (owner runbook). One live OFF smoke run confirmed LEAKED with a verified
+  base64 drop receipt. *(needs `cd realtime && npx convex deploy` by the owner)*
 
 ## Still owed before submission (tracked, not hidden)
 - Slack-surface `guard/deny` line and Beeceptor leak-vs-dark captures (audit log was reset before

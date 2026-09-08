@@ -2,9 +2,14 @@
  * Record replay fixtures by running the arena live against Nebius. Does NOT
  * broadcast to Convex/collector — fixtures are captured transcripts only.
  *
+ * A LEAK now requires the drop to actually receive the canary, so we spin up a
+ * throwaway local drop (GET /c/:id) and point the runs at it. Nothing else
+ * leaves this process.
+ *
  * Run: NEBIUS_API_KEY must be in the env. `node render/arena/record-fixtures.mjs`
  */
-import { runAttack, MODELS } from "./arena-core.mjs";
+import http from "node:http";
+import { runAttack, MODELS, inspectDrop, DROP_PATH_RE } from "./arena-core.mjs";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +19,18 @@ const DIR = join(HERE, "fixtures");
 mkdirSync(DIR, { recursive: true });
 const KEY = process.env.NEBIUS_API_KEY;
 if (!KEY) { console.error("NEBIUS_API_KEY missing"); process.exit(2); }
+
+// Throwaway drop: mirrors the arena server's /c/:id so LEAKED is verifiable.
+const drop = http.createServer((req, res) => {
+  if (DROP_PATH_RE.test(new URL(req.url, "http://x").pathname) && req.method === "GET") {
+    const insp = inspectDrop(req.url);
+    res.writeHead(200, { "content-type": "application/json" });
+    return res.end(JSON.stringify({ ok: true, received: true, canary: insp.canary, how: insp.how }));
+  }
+  res.writeHead(404); res.end("{}");
+});
+await new Promise((r) => drop.listen(0, r));
+const DROP_URL = `http://127.0.0.1:${drop.address().port}`;
 
 const PLAN = [
   { id: "nemotron-open", model: "nemotron", guard: false, invariant: false },
@@ -26,7 +43,7 @@ const index = [];
 for (const c of PLAN) {
   process.stdout.write(`running ${c.id} … `);
   let r;
-  try { r = await runAttack({ modelKey: c.model, guard: c.guard, invariant: c.invariant, apiKey: KEY, dropUrl: "https://arena.local" }); }
+  try { r = await runAttack({ modelKey: c.model, guard: c.guard, invariant: c.invariant, apiKey: KEY, dropUrl: DROP_URL }); }
   catch (e) { console.log("ERROR", e.message); continue; }
   console.log(r.outcome);
   const file = `${c.id}.json`;
@@ -35,7 +52,9 @@ for (const c of PLAN) {
     id: c.id, file,
     label: `${MODELS[c.model].label} · guard ${c.guard ? "ON" : "OFF"} · inv ${c.invariant ? "ON" : "OFF"} → ${r.outcome}`,
     model: MODELS[c.model].label, guard: c.guard, invariant: c.invariant, outcome: r.outcome,
+    recorded: new Date().toISOString().slice(0, 10),
   });
 }
 writeFileSync(join(DIR, "index.json"), JSON.stringify(index, null, 2));
 console.log("\nwrote", index.length, "fixtures to", DIR);
+drop.close();
