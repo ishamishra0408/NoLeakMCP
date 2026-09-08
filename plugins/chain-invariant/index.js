@@ -92,7 +92,8 @@ export async function apply(ctx, config) {
   const envOn = ["1", "true", "on", "yes"].includes(envToggle);
   if (envSet && !envOn) { logger?.warn?.("DISABLED (env) — chain not checked"); return; }
 
-  let dynamicEnabled = cfg.enabled === true; // default OFF unless config/control says on
+  // envSet here implies env is ON (we returned above otherwise). Else follow config/control.
+  let dynamicEnabled = envSet ? true : (cfg.enabled === true);
   if (!envSet && cfg.controlUrl) {
     const poll = async () => {
       try {
