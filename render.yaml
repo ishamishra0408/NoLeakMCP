@@ -1,4 +1,5 @@
-# Render Blueprint — No-Leak-MCP Workflows plane.
+# Render Blueprint — No-Leak-MCP durable plane: a web service + a background worker + a persistent disk.
+# NOTE: this is Render *hosting*. It does NOT use the Render Workflows product (the Workflows challenge's required tech).
 # Deploy: push repo to GitHub, then Render → New → Blueprint → pick this repo.
 # Set CONVEX_URL on the worker (from your Convex deployment) in the dashboard.
 services:

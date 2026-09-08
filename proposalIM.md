@@ -1,5 +1,12 @@
 # proposalIM — dsh-mcp-guard
 
+> **Superseded (2026-09-08).** This is the Sep 5 handoff brief, kept unchanged below as the
+> record of the plan. The project is now **No-Leak-MCP** (renamed from dsh-mcp-guard) and all
+> three controls are built — guard, scorer, and the chain invariant. Current state, evidence
+> ledger and honest scope: [`README.md`](README.md). One correction to the track list below:
+> the Render entry requires the **Render Workflows** product; the current blueprint is a web
+> service + background worker (see `render/README.md`), so that entry is not yet eligible.
+
 **Silent Egress: Observability & Governance for the MCP Slack surface.**
 An AI-security tool, built from DeepSeek Harness (`dsh`) internals, that detects and blocks
 silent credential exfiltration by an agent through its Slack MCP surface — and proves it with a
@@ -7,7 +14,7 @@ hard before/after metric.
 
 **Hackathon:** Burning Token · **Tracks targeted (multi-entry allowed):**
 - 🥇 **Applied AI · Nebius** ($500) — *"an AI tool for a specific task, measure how well it works"*
-- 🥈 **Workflows · Render** ($900 credits) — *"a background process that completes a task and recovers when a step fails"*
+- 🥈 **Workflows · Render** ($900 credits) — *"a background process that completes a task and recovers when a step fails"* — *requires the Render **Workflows** product; what is built is a web service + background worker, port pending*
 - 🥉 **Multiplayer · Convex** ($500) — *"same app, multiple users, in sync, in realtime"*
 
 ---
@@ -74,7 +81,7 @@ Convex-backed dashboard (hosted on Render) -> viewers watch attack-success flip 
 | **Delivery + hosting** | **Render** | attacker listener, OTLP collector, detection worker, dashboard host | *background process that completes a task and recovers when a step fails* |
 | **Realtime state** | **Convex** | live event stream + attack-success metric, synced to all viewers | *same app, multiple users, in sync, realtime* |
 
-**Recovery story (Workflows/Render):** the detection worker rebuilds its state from the durable
+**Recovery story (Render worker):** the detection worker rebuilds its state from the durable
 `dsh-session` log and re-subscribes to the OTLP/Convex streams when a step dies — recovery from
 durable state, not restart-from-zero.
 
@@ -127,8 +134,8 @@ durable state, not restart-from-zero.
 
 ---
 
-*Status: attack fully proven on real infrastructure. The ARCHITECTURE is now modelled as code and
-checked — six views, five ADRs, eight controls green. The defense itself (the three-control guard)
-is the remaining build. This document is the handoff brief for the build session.*
+*Status as written on Sep 5: attack proven, architecture modelled, defense not yet built.
+Status on 2026-09-08: all three controls built and tested — see `README.md`. This document is
+retained as the handoff brief it was.*
 
 *Analysis, reproduction, and diagrams produced with Claude Code.*

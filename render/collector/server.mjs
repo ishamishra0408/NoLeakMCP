@@ -1,6 +1,6 @@
 /**
- * No-Leak-MCP collector — the durable ingress that outlives the laptop (Render,
- * Workflows track). It owns the DURABLE APPEND-ONLY LOG on a persistent disk and
+ * No-Leak-MCP collector — the durable ingress that outlives the laptop (Render
+ * web service + persistent disk; not the Render Workflows product). It owns the DURABLE APPEND-ONLY LOG on a persistent disk and
  * plays three roles the threat model needs off-box:
  *
  *   1. Attacker listener   GET  /c/:trialId?d=<base64>   (the exfil drop — "does the

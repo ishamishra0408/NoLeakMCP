@@ -28,20 +28,40 @@
 workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
 
     model {
-        engA = person "Engineer A" "The rival. Owns none of the harness, and hands a personal agent an open-ended goal."
-        engB = person "Engineer B" "The victim. Owns the dsh install, and sees a normal standup summary."
+        engA = person "Engineer A" "The rival. Owns none of the harness, and hands a personal agent an open-ended goal." {
+            perspectives {
+                "Ownership" "Not ours. Engineer A owns no part of the victim's harness — they set a goal and plant one message, nothing more. The threat model is a rival holding only the same Slack you do: no access to the host, no packet on the victim's wire."
+            }
+        }
+        engB = person "Engineer B" "The victim. Owns the dsh install, and sees a normal standup summary." {
+            perspectives {
+                "Ownership" "Ours to protect, not ours to blame. Engineer B runs the harness and asks for a normal summary; the leak happens inside their own agent, silently, without their knowledge — which is why the refusal has to live below the ask, not in the ask."
+            }
+        }
 
         attacker = softwareSystem "Attacker's agent" "Engineer A's own agent. Not ours, and never touches the victim's host." {
             tags "Existing System"
+            perspectives {
+                "Ownership" "Not ours. Engineer A's agent runs on Engineer A's machine — it never touches the victim's host. Green marks everything outside the boundary this repo can change: we do not harden it, we assume it is hostile."
+            }
         }
         listener = softwareSystem "Attacker listener" "An attacker-owned host that captures the delivery. Outside the harness by construction." {
             tags "Existing System"
+            perspectives {
+                "Ownership" "Not ours, and unreachable by us. The drop receives the credential from Slack's servers, not the victim's — so no egress control on the laptop ever sees the packet. This box appears in the attack trace and vanishes in both defense traces: nothing was delivered."
+            }
         }
         controls = softwareSystem "Network controls" "Firewall, EDR and secret vault — the things that can actually block a packet, which the harness cannot." {
             tags "Existing System"
+            perspectives {
+                "Ownership" "Not ours to place, but the only thing that can drop a real packet. It sits DOWNSTREAM of the unfurl fetch — which is the whole argument for killing at assembly: by the time traffic reaches here, the fetch already happened on someone else's servers."
+            }
         }
         collector = softwareSystem "OTel collector" "Where the indicator lands once it leaves the harness. The last hop this repo can reason about." {
             tags "Existing System"
+            perspectives {
+                "Ownership" "Not ours. Where the indicator lands once it has left the harness — the last hop this repo can still reason about. Everything past it is somebody else's console."
+            }
         }
 
         /* THE INFERENCE PLANE, AND IT IS BOTH ENDS OF THE EXPERIMENT. The same provider serves the
@@ -68,14 +88,35 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
         }
 
         slackWorkspace = softwareSystem "Slack" "Channels and the MCP server the agent reads, and the link-unfurl service that fetches previews server-side." {
-            slack = container "Slack workspace" "Channels and MCP server: where the poisoned message is planted and the unfurl link is posted." "SaaS"
-            unfurl = container "Link unfurl service" "Builds the link preview by fetching the URL from Slack's own servers, not the victim's host." "SaaS"
+            slack = container "Slack workspace" "Channels and MCP server: where the poisoned message is planted and the unfurl link is posted." "SaaS" {
+                perspectives {
+                    "Ownership" "Not ours. The channel the agent reads is untrusted ground: anyone in the workspace can plant a message, and the MCP server hands it to the agent as content. We do not control what arrives here — only what the agent is allowed to do with it."
+                }
+            }
+            unfurl = container "Link unfurl service" "Builds the link preview by fetching the URL from Slack's own servers, not the victim's host." "SaaS" {
+                perspectives {
+                    "Ownership" "Not ours — and this box IS the vulnerability (CVE-2025-34072). It fetches the posted URL from Slack's OWN servers to build a preview, so the credential leaves via a server-side request the victim's host never makes. That server-side fetch is why a host firewall is blind, and why the kill has to be at assembly, before the URL is ever posted."
+                }
+            }
         }
 
         dsh = softwareSystem "dsh harness" "The DeepSeek Harness install: the agent loop, its event-sourced session, and the observability layer assembled from spare parts." {
             run = container "Agent runtime" "The loop, the tools, and the guard slot — the kill point when a bundle is mounted." "dsh · loop · tools · guard" {
                 perspectives {
                     "Rationale" "Gap in Deepseek Harness\n· the guard slot ships and nothing is mounted in it\n\nvs Claude Code\n· PreToolUse hooks and permission prompts gate the CALL\n· neither gates the VALUE carried inside it\n\nNow possible\n· refuse at assembly, not at fetch — while the URL is still an argument\n· nothing leaves, so there is nothing to detect later"
+                }
+                /* THE RUNTIME'S COMPONENTS, and only one of them is ours. loop and dispatch are the
+                   harness's own machinery, drawn unmarked; the guard is the rule we mount in the
+                   dispatch waterfall's pre-execute seat — Modified, because that seat ships and the
+                   guard is the value-check it never carried. This is the kill point the container
+                   description promises: at THIS level you can see where the refusal happens. */
+                loop = component "Agent loop" "Calls the model, assembles each tool call, and applies the dispatch verdict." "dsh · loop"
+                dispatch = component "Tool dispatch" "The tools/pre-execute waterfall and tools/result emit — the one seat every guard and invariant mounts into, run before the request is assembled." "dsh · tools"
+                guard = component "Guard" "modified — hover for details. The canary tripwire: denies an outbound call whose argument carries a known decoy, at assembly." "dsh-guard · mcp-guard" {
+                    tags "Modified"
+                    perspectives {
+                        "Rationale" "Gap in Deepseek Harness\n· the guard slot ships empty; nothing inspects the value inside the argument\n\nvs Claude Code\n· permission prompts approve the CALL, not the canary carried in it\n\nNow possible\n· deny at assembly the instant a known decoy appears in an outbound argument — nothing leaves to detect later"
+                    }
                 }
             }
             store = container "Session store" "Event-sourced: every step of the chain is already written down here before anyone asks." "dsh · session · jsonl · query" {
@@ -119,6 +160,9 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
             }
 
             obs = container "Observability" "Telemetry and invariants: scores ingested content, and asserts no secret reaches a URL without a human in the window." "dsh · telemetry · invariants" {
+                perspectives {
+                    "Rationale" "Gap in Deepseek Harness\n· the redact/score waterfall ships empty, and the invariant seat accepts a companion it has none of\n· two open seats, no rule in either\n\nvs Claude Code\n· CC exports telemetry, but scores nothing in-process and joins no earlier read to a later post\n· same blind spot, one level up\n\nNow possible\n· the layer that turns a durable log into an indicator a firewall can act on\n· three jobs — suspect (scorer), prove (invariant), tell (exporter)"
+                }
                 /* MODIFIED, not Proposal: dsh-session-telemetry's redact/score waterfall ships EMPTY, so
                    this is a rule in a seat the harness already offers. The stroke says so. */
                 scorer = component "Injection scorer" "modified — hover for details. Suspects: scores ingested text for instruction patterns." "dsh-session-telemetry" {
@@ -128,10 +172,12 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
                         "Rationale" "Gap in Deepseek Harness\n· the redact/score waterfall ships empty\n· ingested text is walked once and scored by nothing\n\nvs Claude Code\n· no scoring stage either\n· tool_result carries the text, so scoring runs after export and cannot block\n\nNow possible\n· a first signal in-process and before redaction\n· gives the guard downstream something to weigh"
                     }
                 }
-                /* PROPOSAL: dsh-invariants accepts companions and has none for this, so there is no
-                   empty seat to fill — this is a component the harness has no opinion about. */
-                invariant = component "Chain invariant" "proposed — hover for details. Proves: a secret from an earlier result reached a later URL with no approval between." "dsh-invariants" {
-                    tags "Proposal"
+                /* BUILT (2026-09-08), and MODIFIED rather than Proposal: it ships as a rule in the same
+                   dsh-tools waterfall the guard mounts in — harvest read-values at tools/result, deny their
+                   reappearance at tools/pre-execute. The dsh-invariants companion seat the ADR names is
+                   the next step, not what runs. The stroke says which. */
+                invariant = component "Chain invariant" "built — hover for details. Proves: a secret from an earlier result reached a later outbound argument with no approval between." "dsh-tools · chain-invariant" {
+                    tags "Modified"
                     !adrs adrs-invariant
                     perspectives {
                         "Rationale" "Gap in Deepseek Harness\n· no single call is anomalous\n· the read and the post are both logged, and nothing joins them\n\nvs Claude Code\n· prompt.id joins events to one prompt\n· that is causal correlation, not data flow — the same blind spot\n\nNow possible\n· a claim about a PAIR: an earlier secret reaching a later URL, no approval between\n· makes the guard refusal explainable, the indicator worth acting on"
@@ -159,6 +205,24 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
         unfurl -> listener "Fetches the url server-side from" "DNS + HTTPS"
         listener -> engA "Delivers the stolen credential to"
         run -> engB "Returns a normal standup summary to"
+
+        /* THE DEFENSE EDGES, bundle ON. Two kills, two mechanisms, and neither lets a packet leave.
+           The guard needs the value TAGGED (it recognises the canary); the invariant needs nothing
+           but the value's REAPPEARANCE (a read reaching a later post). Both refuse at assembly, so
+           run -> slack "Posts the unfurl link to" never fires and the listener never appears. Drawn
+           statically so both KillChainBlocked traces reuse them rather than inventing edges. */
+        run -> store "Appends the guard's canary denial to" "canary in the argument · refused at assembly"
+        run -> store "Appends the invariant's provenance denial to" "read-then-post window · no approval between"
+        obs -> run "Fails the chain invariant and denies the post to" "read-then-post window · no approval between"
+        run -> engB "Returns a summary naming the blocked exfil to"
+
+        /* THE RUNTIME ONE LEVEL DOWN: loop → dispatch → guard, and the guard is the gate on the
+           outbound post. The container edge run -> slack is the SUMMARY of guard -> slack here. */
+        loop -> dispatch "Submits each tool call to"
+        dispatch -> guard "Runs the pre-execute waterfall through" "tools/pre-execute"
+        guard -> slack "Allows or denies the unfurl post to" "deny if the canary is in the argument"
+        loop -> nebius "Calls the victim model on" "OpenAI-compatible"
+        dispatch -> store "Appends each call and result to" "durable event"
         /* The container-level edges are the SUMMARY of the component chain below them; both are kept
            so the container view still tells the story and the component view can be precise. */
         store -> obs "Hands the redacted record to" "sessionTelemetry/record"
@@ -283,6 +347,18 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
             description "Inside the harness: the runtime that can be guarded, the store that already knows, and the layer that tells someone who can block a packet."
         }
 
+        /* LEVEL 3, RUNTIME SIDE. The container view promises the guard is a "kill point"; this view
+           is where you can see it. loop → dispatch → guard, and the guard sits on the path to Slack:
+           the outbound post is refused HERE, at assembly, before it is ever an argument on the wire. */
+        component run "Runtime" {
+            properties {
+                "structurizr.tooltips" "true"
+            }
+            include *
+            autoLayout lr
+            description "The kill point, up close. The loop calls the model and hands each tool call to dispatch; dispatch runs the pre-execute waterfall through the guard; the guard denies the outbound post the instant its argument carries the decoy. Deny at assembly — nothing leaves to detect later."
+        }
+
         /* THE KILL CHAIN, bundle off. Eleven steps, in the order the generator declares them, with
            its own wording. Structurizr renumbers a dynamic view 1..n contiguously, which lands on
            exactly the numbering the sequence plate already uses for this run. */
@@ -303,6 +379,46 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
             run -> engB "Returns a normal standup summary to"
             autoLayout lr 400 400
             description "The silent leak, bundle off: nothing renders in the channel and the theft has already happened."
+        }
+
+        /* THE SAME CHAIN, CUT — BAND 2b, first mechanism: the guard (tagged). Steps 1..5 are the
+           attack verbatim; at step 6 the guard recognises the decoy canary in the outbound argument
+           and denies the post at assembly. run -> slack never fires, so the listener never appears
+           and Engineer A is delivered nothing. Engineer B's summary now NAMES the block instead of
+           hiding it. This is the deterministic kill (5/5 in eval) and the on-stage default. */
+        dynamic dsh "KillChainGuard" {
+            properties {
+                "structurizr.tooltips" "true"
+            }
+            engA -> attacker "Sets an open-ended goal for"
+            attacker -> slack "Posts hidden instructions to"
+            engB -> run "Asks for a standup summary from"
+            slack -> run "Returns the poisoned channel to"
+            run -> store "Appends the poisoned result to"
+            run -> store "Appends the guard's canary denial to"
+            run -> engB "Returns a summary naming the blocked exfil to"
+            autoLayout lr 400 400
+            description "Bundle ON, the tripwire. The guard recognises the decoy canary in the outbound argument and refuses the post at assembly — step 6 is a denial, not a delivery. The listener is absent: nothing left the host. Compare step 6 here with the leak trace, where the same edge posts the link."
+        }
+
+        /* THE SAME CHAIN, CUT — BAND 2b, second mechanism: the chain invariant (tagless). No canary
+           is needed. The invariant harvests the credential value from the READ (step 5's result),
+           then at the post's pre-execute sees that value reappear in the argument with no human
+           approval in the window, and denies. This is the kill for an UNTAGGED secret — the one the
+           tripwire above would miss — and the reason the two traces are kept separate. */
+        dynamic dsh "KillChainInvariant" {
+            properties {
+                "structurizr.tooltips" "true"
+            }
+            engA -> attacker "Sets an open-ended goal for"
+            attacker -> slack "Posts hidden instructions to"
+            engB -> run "Asks for a standup summary from"
+            slack -> run "Returns the poisoned channel to"
+            run -> store "Appends the poisoned result to"
+            run -> store "Appends the invariant's provenance denial to"
+            run -> engB "Returns a summary naming the blocked exfil to"
+            autoLayout lr 400 400
+            description "Bundle ON, tagless. START AT 1. No canary needed: the invariant harvested the credential from the read at step 5, and when that exact value reappears in the outbound post's argument it denies on provenance at step 6 — a value from an earlier tool result is leaving with no approval in the window. Catches the untagged secret the guard's canary never knew about. (For the observability components that prove this — scorer, invariant, exporter — open the ExfiltrationSignal trace.)"
         }
 
         component obs "Observability" {

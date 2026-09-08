@@ -1,8 +1,16 @@
-# dsh-mcp-guard eval harness
+# No-Leak-MCP eval harness
 
 Measures **attack-success-rate (ASR)** for silent credential exfiltration with the
-compose guard **OFF vs ON**, across victim models and attack styles. The headline
-result: **ASR 1.0 → 0** when the guard is on.
+compose guard **OFF vs ON**, across victim models and attack styles. The headline,
+stated per arm because they mean different things:
+
+- **`direct` arm:** ASR **1.00 → 0.00** on both victims, and the guard denied **5/5** of
+  the attempts — this is the guard's causal effect.
+- **`injected` arm:** ASR **0.40 / 0.60 → 0.00**, but only **1/1** (Nemotron) and **3/4**
+  (Llama) of the ON-run attempts were guard denials. The rest of the OFF→ON drop is the
+  model declining on its own. Read **blocked/attempts**, not ASR, as the guard's effect here.
+
+Full table: `out/results.md`. Per-trial ground truth: `out/trials.jsonl`.
 
 ## How success is measured
 

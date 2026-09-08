@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 // Stable identity for cross-source dedupe (must match realtime/bridge keyOf()).
 function keyOf(e){ const kind=e.event??e.kind??""; return createHash("sha1").update([kind,e.callId||"",e.marker||"",e.how||"",e.tool||"",(e.sample||"").slice(0,60)].join("|")).digest("hex"); }
 /**
- * No-Leak-MCP detection worker (Render, Workflows track).
+ * No-Leak-MCP detection worker (Render background worker — not the Render Workflows product).
  *
  * Consumes the collector's DURABLE LOG by byte offset and RECOVERS from a
  * checkpoint on restart — restart-from-log, not restart-from-zero. Each pass:
