@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>No-Leak-MCP — live</title>
+<style>
+  :root { color-scheme: light dark; --bg:#0b0e14; --panel:#141925; --ink:#e6edf3; --dim:#8b98a9;
+    --ok:#2ea043; --bad:#f85149; --amber:#d29922; --line:#232b3a; --accent:#58a6ff; }
+  * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:18px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  h1 { font-size:17px; margin:0; letter-spacing:.2px; } .sub { color:var(--dim); font-size:12px; }
+  .wrap { padding:20px 22px; max-width:1100px; margin:0 auto; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .tile { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .tile .n { font-size:26px; font-weight:700; } .tile .l { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--dim); margin:22px 0 10px; }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  th { color:var(--dim); font-weight:600; font-size:12px; } tr:last-child td { border-bottom:none; }
+  .asr { font-weight:700; } .asr.off { color:var(--bad); } .asr.on { color:var(--ok); } .asr.na { color:var(--dim); }
+  .feed { max-height:360px; overflow:auto; } .k { display:inline-block; min-width:118px; font-weight:600; }
+  .k.deny { color:var(--bad); } .k.verdict { color:var(--amber); } .k.trial { color:var(--accent); }
+  .pill { font-size:11px; padding:1px 7px; border-radius:20px; border:1px solid var(--line); color:var(--dim); }
+  .setup { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:18px; }
+  input { background:#0b0e14; border:1px solid var(--line); color:var(--ink); padding:7px 10px; border-radius:7px; width:min(420px,70vw); }
+  button { background:var(--accent); color:#04121f; border:0; padding:7px 14px; border-radius:7px; font-weight:600; cursor:pointer; }
+  code { color:var(--accent); } .muted { color:var(--dim); } a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ No-Leak-MCP <span class="sub">live attack-success-rate · guard OFF vs ON</span></h1>
+  <span id="conn" class="pill">connecting…</span>
+</header>
+<div class="wrap">
+  <div id="setup" class="setup" hidden>
+    <div style="margin-bottom:8px">Paste your Convex deployment URL (from <code>npx convex dev</code>, e.g. <code>https://xxxx.convex.cloud</code>):</div>
+    <input id="url" placeholder="https://your-deployment.convex.cloud" />
+    <button id="save">Connect</button>
+    <div class="muted" style="margin-top:8px">Stored in this browser only.</div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Attack-success-rate matrix</h2>
+  <table id="matrix"><thead><tr><th>Victim</th><th>Style</th><th>Guard OFF</th><th>Guard ON</th><th>Denied (ON)</th><th>Unevaluable</th></tr></thead><tbody><tr><td colspan="6" class="muted">waiting for data…</td></tr></tbody></table>
+
+  <h2>Live event feed</h2>
+  <div class="feed"><table id="feed"><tbody><tr><td class="muted">waiting…</td></tr></tbody></table></div>
+</div>
+
+<script type="module">
+  import { ConvexClient } from "https://esm.sh/convex@1.16.0/browser";
+  import { anyApi } from "https://esm.sh/convex@1.16.0/server";
+
+  const esc = (v) => String(v==null?"":v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const q = new URLSearchParams(location.search);
+  const ls = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+  let url = q.get("url") || ls.get("convexUrl") || "";
+  const conn = document.getElementById("conn");
+  const setup = document.getElementById("setup");
+  document.getElementById("save").onclick = () => {
+    const v = document.getElementById("url").value.trim();
+    if (v) { ls.set("convexUrl", v); location.search = "?url=" + encodeURIComponent(v); }
+  };
+  if (!url) { setup.hidden = false; conn.textContent = "no URL"; }
+  else start(url);
+
+  function start(u) {
+    let client;
+    try { client = new ConvexClient(u); } catch (e) { conn.textContent = "bad URL"; setup.hidden = false; return; }
+    conn.textContent = "live ● " + u.replace(/^https?:\/\//, "");
+    conn.style.color = "var(--ok)";
+
+    client.onUpdate(anyApi.metrics.summary, {}, (s) => {
+      const t = [["events", s.total], ["guard denials", s.denies], ["scorer verdicts", s.verdicts],
+        ["injections flagged", s.injections], ["eval trials", s.trials], ["delivered (attacks)", s.delivered]];
+      document.getElementById("tiles").innerHTML = t.map(([l, n]) =>
+        `<div class="tile"><div class="n">${n ?? 0}</div><div class="l">${l}</div></div>`).join("");
+    }, () => {});
+
+    client.onUpdate(anyApi.metrics.cells, {}, (rows) => {
+      const byMS = {};
+      for (const r of rows) { (byMS[`${r.model}|${r.style}`] ??= {})[r.guard] = r; }
+      const body = Object.keys(byMS).sort().map((k) => {
+        const [model, style] = k.split("|"); const off = byMS[k].off, on = byMS[k].on;
+        const cell = (r, cls) => r ? `<span class="asr ${cls}">${r.asr.toFixed(2)}</span> <span class="muted">(${r.delivered}/${r.evaluable})</span>` : `<span class="asr na">n/a</span>`;
+        const un = (off?.unevaluable || 0) + (on?.unevaluable || 0);
+        return `<tr><td>${esc(model)}</td><td>${esc(style)}</td><td>${cell(off, "off")}</td><td>${cell(on, "on")}</td><td>${on ? on.denied : "-"}</td><td>${un}</td></tr>`;
+      }).join("");
+      document.querySelector("#matrix tbody").innerHTML = body || `<tr><td colspan="6" class="muted">no trials yet</td></tr>`;
+    }, () => {});
+
+    client.onUpdate(anyApi.metrics.feed, { limit: 60 }, (rows) => {
+      const row = (e) => {
+        const time = new Date(e.ts).toLocaleTimeString();
+        if (e.kind === "guard/deny") return `<tr><td><span class="k deny">DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · ${esc(e.how)} <span class="muted">${esc(e.marker)}</span></td></tr>`;
+        if (e.kind === "scorer/verdict") return `<tr><td><span class="k verdict">${e.injection?"INJECTION":"clean"}</span> <span class="muted">${time}</span> ${esc(e.tool)} · score ${typeof e.score==="number"?e.score.toFixed(2):"?"} <span class="muted">${esc((e.labels||[]).join(", "))}</span></td></tr>`;
+        if (e.kind === "trial") return `<tr><td><span class="k trial">TRIAL</span> <span class="muted">${time}</span> ${esc(e.model)} · ${esc(e.style)} · guard ${esc(e.guard)} → ${e.delivered?"delivered":e.unevaluable?"unevaluable":"blocked"}</td></tr>`;
+        return `<tr><td class="muted">${time} ${esc(e.kind)}</td></tr>`;
+      };
+      document.querySelector("#feed tbody").innerHTML = rows.map(row).join("") || `<tr><td class="muted">no events</td></tr>`;
+    }, () => {});
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+# Render Blueprint — No-Leak-MCP Workflows plane.
+# Deploy: push repo to GitHub, then Render → New → Blueprint → pick this repo.
+# Set CONVEX_URL on the worker (from your Convex deployment) in the dashboard.
+services:
+  - type: web
+    name: noleak-collector
+    runtime: node
+    rootDir: render
+    plan: starter
+    buildCommand: npm install
+    startCommand: node collector/server.mjs
+    healthCheckPath: /health
+    disk:
+      name: noleak-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: INGEST_TOKEN
+        generateValue: true   # shared secret; write endpoints require x-noleak-token
+
+  - type: worker
+    name: noleak-detection-worker
+    runtime: node
+    rootDir: render
+    plan: starter
+    buildCommand: npm install
+    startCommand: node worker/worker.mjs
+    envVars:
+      - key: COLLECTOR_URL
+        fromService:
+          type: web
+          name: noleak-collector
+          property: hostport   # host:port on Render's private network; the worker prepends http:// (see worker.mjs)
+      - key: INGEST_TOKEN
+        fromService:
+          type: web
+          name: noleak-collector
+          envVarKey: INGEST_TOKEN
+      - key: CONVEX_URL
+        sync: false   # paste your Convex deployment URL in the Render dashboard

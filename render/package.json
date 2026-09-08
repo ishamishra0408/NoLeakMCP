@@ -1,0 +1,17 @@
+{
+  "name": "no-leak-mcp-render",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Render services: durable collector (OTLP sink + attacker listener) and a checkpointing detection worker that recovers from the durable log.",
+  "scripts": {
+    "collector": "node collector/server.mjs",
+    "worker": "node worker/worker.mjs"
+  },
+  "optionalDependencies": {
+    "convex": "^1.16.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

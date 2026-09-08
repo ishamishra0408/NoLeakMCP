@@ -1,0 +1,16 @@
+# Verify overlay: turn the session-telemetry waterfall ON (mode FULL) so the
+# injection-scorer rule fires, and (for this self-contained check) treat the
+# bash tool result as ingested content. exporter.url points at a local OTLP
+# path; if nothing is listening the export fails harmlessly and the waterfall
+# still dispatches.
+- id: session-telemetry-otel
+  config:
+    mode: FULL
+    exporter:
+      url: http://127.0.0.1:4318/v1/logs
+- id: injection-scorer
+  config:
+    surfaces: ['bash', 'mcp__slack__', 'web']
+    model: Qwen/Qwen3-30B-A3B-Instruct-2507
+    threshold: 0.5
+    scoreLogPath: !!js process.env.HOME + '/.dsh/mcp-guard.scores.jsonl'

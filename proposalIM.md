@@ -48,7 +48,7 @@ Three controls, each a first-class `dsh` plugin registration (not a patch), comp
 | Control | dsh seam | Catches |
 |---|---|---|
 | **Injection-Signal scorer** | `dsh-session-telemetry` redact/score waterfall (ships empty) | instruction patterns in ingested Slack content |
-| **Payload-Compose guard** | `dsh-tools` `ctx.tools.guard` (monotonic, synchronous) | a tagged secret assembled into an outbound tool argument — **the kill point** |
+| **Payload-Compose guard** | `dsh-tools` `tools/pre-execute` waterfall (returns `{kind:'deny'}`) | a tagged secret assembled into an outbound tool argument — **the kill point** |
 | **Exfiltration-Chain invariant** | `dsh-invariants` companion over the `dsh-session` log | secret read → same secret in a later outbound URL, no human approval in the window |
 
 The guard is **model-independent**: it keys on the mechanical fact *"a tagged secret is leaving in an
@@ -91,7 +91,7 @@ durable state, not restart-from-zero.
 |---|---|---|
 | 0 | — | Claim Nebius $25 + Render $50 credits |
 | 1 | **Nebius** | Point dsh victim + scorer at Nebius inference (fixes reliability) |
-| 2 | core | Compose guard (`ctx.tools.guard`) — registered, disposes with its fiber |
+| 2 | core | Compose guard (`tools/pre-execute` waterfall) — registered, disposes with its fiber |
 | 3 | **Convex** | Realtime event store + reactive, multi-viewer dashboard |
 | 4 | **Render** | Deploy detection worker (with recovery) + host dashboard |
 | 5 | — | Eval harness: N runs → attack-success-rate 1→0 |

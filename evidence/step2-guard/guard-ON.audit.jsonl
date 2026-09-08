@@ -1,0 +1,1 @@
+{"ts":"2026-09-05T22:06:22.388Z","event":"guard/deny","tool":"bash","how":"base64-decoded","marker":"canary","path":"$.command","sample":"…_access_key=canary_akia_9f2a7c…","agent":"session-fe42a720-abd4-4289-a85c-7f47688ea351","callId":"chatcmpl-tool-8fb93f381f2f4f14a6441f3143e73948"}

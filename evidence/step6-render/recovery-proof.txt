@@ -1,0 +1,6 @@
+Local recovery test (render collector + worker):
+ pass 1: processed 4 (offset 0→439), detections 3 [EXFIL_DELIVERED, EGRESS_BLOCKED, INJECTION_FLAGGED]
+ pass 2: processed 0  (RESUMED from checkpoint — no reprocessing)
+ pass 3: appended 1 → processed ONLY 1 (offset 439→524)
+ durable checkpoint persisted: offset 524
+Conclusion: worker recovers from the durable log by checkpoint; restart-from-log, not restart-from-zero.

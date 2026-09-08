@@ -1,0 +1,1 @@
+collector on :10099  data=/tmp/noleak-render-test

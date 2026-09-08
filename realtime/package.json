@@ -1,0 +1,19 @@
+{
+  "name": "no-leak-mcp-realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Convex realtime projection + dashboard + dsh log bridge for No-Leak-MCP",
+  "scripts": {
+    "convex": "convex dev",
+    "bridge": "node bridge/tail-to-convex.mjs",
+    "backfill": "node bridge/tail-to-convex.mjs --backfill --once",
+    "dashboard": "node -e \"import('node:http').then(({default:h})=>h.createServer((q,s)=>{import('node:fs').then(f=>{s.writeHead(200,{'content-type':'text/html'});s.end(f.readFileSync('dashboard/index.html'))})}).listen(8080,()=>console.log('dashboard: http://127.0.0.1:8080')))\""
+  },
+  "dependencies": {
+    "convex": "^1.16.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
