@@ -9,3 +9,7 @@ architecture/svg/
 # secret scanner doesn't flag the token-shaped patterns.
 agent-credentials.env
 .env
+
+# Structurizr Lite/local working cache
+.structurizr/
+architecture/**/.structurizr/
