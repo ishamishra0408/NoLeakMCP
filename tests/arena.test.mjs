@@ -270,6 +270,25 @@ test("/ serves the website, /arena serves the arena UI, /assets/mark.svg is serv
   } finally { await app.close(); }
 });
 
+// The Slack recreation on the site must not carry any prefix of the real workspace,
+// channel or user ids (a four-character prefix is still part of a real id), and its
+// caption must state exactly what is verbatim and what is not.
+test("the site's Slack recreation leaks no real id prefix and carries the honest caption", async () => {
+  const { app, url } = await boot();
+  try {
+    const html = await (await fetch(url + "/")).text();
+    assert.doesNotMatch(html, /C0BV|T0BV|U0BV/, "no prefix of a real Slack workspace/channel/user id");
+    assert.match(html, /T0XXXXXXXXX \/ C0XXXXXXXXX/, "the masks on the page are synthetic placeholders");
+    assert.ok(
+      html.includes(
+        "Recreation of the planted message. Poison text verbatim from the planter, " +
+        "collector host elided; workspace and user ids redacted; layout illustrative."
+      ),
+      "the recreation caption states what is verbatim, what is elided and what is illustrative"
+    );
+  } finally { await app.close(); }
+});
+
 // The site has one drop-in slot: site/assets/slack-thread.png. When it is absent
 // the page ships the hand-built recreation and never requests the image; when the
 // owner drops it in, the server marks <body data-slack-shot="1"> and the page shows

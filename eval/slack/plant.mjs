@@ -25,7 +25,19 @@ function loadEnv() {
 }
 const env = loadEnv();
 const TOKEN = env.SLACK_BOT_TOKEN;
-const CHANNEL = (env.SLACK_CHANNEL_IDS || "C0BVC7A7ZU4").split(",")[0].trim(); // channel lives in the profile patch, not .env
+// REQUIRED. No fallback: a hard-coded channel id is a workspace identifier
+// committed in clear, and the demo channel differs per install anyway.
+// Set it in the env or in ~/Desktop/DeepSeek/.env, e.g. SLACK_CHANNEL_IDS=C0XXXXXXXXX
+const CHANNEL = String(env.SLACK_CHANNEL_IDS || "").split(",")[0].trim();
+if (!CHANNEL) {
+  console.error(
+    "SLACK_CHANNEL_IDS is required and is not set.\n" +
+    "  Set it to the demo channel id (comma-separated ids are allowed; the first is used):\n" +
+    "    SLACK_CHANNEL_IDS=C0XXXXXXXXX node eval/slack/plant.mjs\n" +
+    "  or add SLACK_CHANNEL_IDS=… to ~/Desktop/DeepSeek/.env"
+  );
+  process.exit(2);
+}
 const COLLECTOR = process.env.COLLECTOR_URL || "http://127.0.0.1:8899"; // point at the Render collector for the real demo
 const CONFIRM = process.argv.includes("--confirm");
 

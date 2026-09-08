@@ -61,16 +61,24 @@ and live only on `:root`.
 ## Spacing, radius, motion
 - Space scale (px): 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 128. Section padding 96 desktop / 64 mobile. Container 1120px, gutter 24 / 16.
 - Radius: 6 (buttons, code chips), 14 (cards), 999 (pills). No radius above 14 except pills.
-- Motion (HIG: purposeful, brief, reversible): micro 180ms, enter 320ms, leave 200ms, indicator move 280ms — every UI transition inside 150–400ms. Entering uses `--ease-out cubic-bezier(0,0,.2,1)`, leaving `--ease-in cubic-bezier(.4,0,1,1)`, standard `--ease cubic-bezier(.2,.7,.2,1)`. Two documented exceptions: the statistic counter (900ms, content not chrome) and the scroll parallax (no duration — it is bound to scroll progress). A theme change suppresses every transition for that frame. Parallax plane rates 0.04 / 0.06 / 0.10 / 0.18 / 0.28 / 0.40 (far→front). The **scroll** offset is native — `animation-timeline: view(block)` behind `@supports (animation-timeline: scroll())` — with the JS `translate3d` loop as the fallback only where `CSS.supports('animation-timeline: scroll()')` is false; the script skips the plane transform entirely on the native path, so the two never fight. The **pointer** depth (4–22px, `(hover:hover) and (pointer:fine)` only) rides a separate `.layers__depth` child in both paths. Every effect is a `transform`/`opacity` change — never layout. `prefers-reduced-motion`: **both** parallax paths (the native scroll timeline and the JS fallback), ticking and stacking are off; reveals become 200ms opacity fades.
+- Motion (HIG: purposeful, brief, reversible): micro 180ms, enter 320ms, leave 200ms, indicator move 280ms — every UI transition inside 150–400ms. Entering uses `--ease-out cubic-bezier(0,0,.2,1)`, leaving `--ease-in cubic-bezier(.4,0,1,1)`, standard `--ease cubic-bezier(.2,.7,.2,1)`. Two documented exceptions: the statistic counter (900ms, content not chrome) and the scroll parallax (no duration — it is bound to scroll progress). A theme change suppresses every transition for that frame. Parallax plane rates 0.04 / 0.06 / 0.10 / 0.18 / 0.28 / 0.40 (far→front). The **scroll** offset is native — `animation-timeline: view(block)` behind `@supports (animation-timeline: view())` — with the JS `translate3d` loop as the fallback only where `CSS.supports('animation-timeline: view()')` is false; the script skips the plane transform entirely on the native path, so the two never fight. The **pointer** depth (4–22px, `(hover:hover) and (pointer:fine)` only) rides a separate `.layers__depth` child in both paths. Every effect is a `transform`/`opacity` change — never layout. `prefers-reduced-motion`: **both** parallax paths (the native scroll timeline and the JS fallback), ticking and stacking are off; reveals become 200ms opacity fades.
 - Layer blending: layered sections end in a 200px gradient to the next ground — no hard cuts.
 
 ## Adding the real Slack screenshot
 
-The attack section shows a **recreation** of the planted thread: Slack's own chrome, the
-`POISON` text copied verbatim from `eval/slack/plant.mjs`, the drop URL in its real shape
-(`…/c/slack-health?d=<base64>`), `ops-bot` with an `APP` badge in `#eng-channel`, and the
-workspace/channel ids masked as `T0BV…` / `C0BV…` — the repo's redaction removed the real ids
-on purpose and they must not come back.
+The attack section shows a **recreation** of the planted message: Slack's own chrome, the
+`POISON` text copied verbatim from `eval/slack/plant.mjs` as plain text (Slack applies no code
+chrome to it), the drop URL in its real shape with the collector host elided
+(`…/c/slack-health?d=<base64>`), and `ops-bot` with an `APP` badge in `#eng-channel`.
+
+Two rules the recreation obeys, and any replacement must too:
+
+- **It is a top-level channel message, not a thread.** `eval/slack/plant.mjs` posts one
+  `chat.postMessage` with no `thread_ts`. No parent message, no reply count, no wall-clock
+  timestamp — none of that exists in any repo source, so none of it is drawn.
+- **The ids are synthetic, not truncated.** `T0XXXXXXXXX` / `C0XXXXXXXXX` are placeholders.
+  A prefix of a real id is still part of a real id; the real workspace and channel ids are
+  not in this repo and must not come back.
 
 There is a drop-in slot for the genuine article:
 
