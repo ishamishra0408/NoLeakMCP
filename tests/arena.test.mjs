@@ -243,3 +243,35 @@ test("/health and /api/config report live + fixtures without a network call", as
     assert.equal(c.liveEnabled, true);
   } finally { await app.close(); }
 });
+
+test("/ serves the website, /arena serves the arena UI, /assets/mark.svg is served, traversal is refused", async () => {
+  const { app, url } = await boot();
+  try {
+    const site = await fetch(url + "/");
+    assert.equal(site.status, 200);
+    assert.match(site.headers.get("content-type"), /text\/html/);
+    const siteHtml = await site.text();
+    assert.match(siteHtml, /<title>No-Leak-MCP — the Slack credential leak/);
+    assert.match(siteHtml, /href="\/arena"/, "site links to the arena");
+    const arena = await fetch(url + "/arena");
+    assert.equal(arena.status, 200);
+    const arenaHtml = await arena.text();
+    assert.match(arenaHtml, /<title>No-Leak-MCP — Arena<\/title>/);
+    assert.match(arenaHtml, /id="launch"/, "arena UI, not the site");
+    const mark = await fetch(url + "/assets/mark.svg");
+    assert.equal(mark.status, 200);
+    assert.match(mark.headers.get("content-type"), /image\/svg\+xml/);
+    assert.equal((await fetch(url + "/assets/..%2F..%2Fpackage.json")).status, 404);
+    assert.equal((await fetch(url + "/assets/server.mjs")).status, 404);
+  } finally { await app.close(); }
+});
+
+test("moving the arena to /arena left the API routes in place", async () => {
+  const { app, url } = await boot();
+  try {
+    assert.equal((await fetch(url + "/health")).status, 200);
+    assert.equal((await fetch(url + "/api/config")).status, 200);
+    assert.equal((await fetch(url + "/dashboard")).status, 200);
+    assert.equal((await fetch(url + "/api/replay", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status, 200);
+  } finally { await app.close(); }
+});

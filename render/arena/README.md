@@ -46,7 +46,9 @@ means exactly what the guard would have blocked, the same test with the control 
 
 | Route | Purpose |
 |---|---|
-| `GET /` | The arena UI |
+| `GET /` | The public website (`site/index.html`) |
+| `GET /arena` | The arena UI |
+| `GET /assets/*` | Website assets (`site/assets/`, extension allowlist) |
 | `GET /dashboard` | The shared live dashboard (same origin; reads Convex directly) |
 | `GET /health` | Liveness + whether live runs are enabled + fixture count |
 | `GET /api/config` | Models, fixtures, rate-limit state, drop base, dashboard path |
@@ -78,7 +80,7 @@ locally only (they are not re-broadcast, so they never inflate the live metrics)
 export NEBIUS_API_KEY=...          # required for live runs; Replay works without it
 # optional: export CONVEX_URL=... COLLECTOR_URL=... INGEST_TOKEN=... NOLEAK_SECRET=...
 node render/arena/server.mjs       # from the repo root — it imports ../../plugins/*
-# open http://127.0.0.1:10000
+# open http://127.0.0.1:10000        (website)  ·  http://127.0.0.1:10000/arena  (arena UI)
 ```
 
 Re-record the replay fixtures (makes a few live Nebius calls, does not broadcast):

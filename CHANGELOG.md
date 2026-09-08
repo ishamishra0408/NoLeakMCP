@@ -82,6 +82,13 @@ Nothing above is submitted as event work.
   `render/arena/DEPLOY.md` (owner runbook). One live OFF smoke run confirmed LEAKED with a verified
   base64 drop receipt. *(needs `cd realtime && npx convex deploy` by the owner)*
 
+### 2026-09-08 — website
+- `site/` — the public landing page (`site/index.html`, brand guidelines in `site/BRAND.md`, SVG mark in
+  `site/assets/`): the attack in one scroll, the three controls, the eval table and evidence ledger verbatim
+  from the README, honest scope, provenance. Static, no build, no JS libraries. The arena service now serves
+  it at `/` and the arena UI at `/arena` (`/api/*`, `/c/:id`, `/dashboard`, `/health` unchanged); the
+  dashboard's "Try the arena →" defaults to `/arena`. Two arena tests added for the routes.
+
 ## Still owed before submission (tracked, not hidden)
 - Slack-surface `guard/deny` line and Beeceptor leak-vs-dark captures (audit log was reset before
   they were copied out).

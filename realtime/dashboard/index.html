@@ -68,9 +68,11 @@
   const esc = (v) => String(v==null?"":v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const q = new URLSearchParams(location.search);
 
-  // "Try the arena →" link: ?arena=<url> wins, else this placeholder (owner: paste
-  // the deployed arena URL here after `render.yaml` deploys the noleak-arena service).
-  const ARENA_URL = ""; // e.g. "https://noleak-arena.onrender.com"
+  // "Try the arena →" link: ?arena=<url> wins, else this default. The arena server
+  // serves this dashboard at /dashboard and the arena UI at /arena on the same
+  // origin, so the relative path works there; when the dashboard is hosted
+  // elsewhere (Vercel), set the absolute arena URL, e.g. "https://noleak-arena.onrender.com/arena".
+  const ARENA_URL = "/arena";
   const arenaHref = q.get("arena") || ARENA_URL;
   const arenaLink = document.getElementById("arenaLink");
   if (arenaHref) { arenaLink.href = arenaHref; arenaLink.hidden = false; }

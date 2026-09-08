@@ -31,7 +31,8 @@ Replace `ARENA` with the arena's public URL (e.g. `https://noleak-arena.onrender
 
 ```bash
 curl -s $ARENA/health        # {"ok":true,"live":true,"convex":true,"collector":true,...}
-open  $ARENA/                # UI loads; click Replay → a recorded transcript animates + outcome banner
+open  $ARENA/                # the website loads (site/index.html)
+open  $ARENA/arena           # arena UI loads; click Replay → a recorded transcript animates + outcome banner
 # one live run (OFF) — costs a few Nebius calls:
 curl -s -X POST $ARENA/api/attack -H 'content-type: application/json' \
      -d '{"model":"nemotron","guard":false,"invariant":false}' | tee /tmp/run.json
@@ -56,9 +57,10 @@ legacy trial shape if the deployment hasn't been updated yet.
 
 ## 4. Dashboard — link back to the arena
 
-Set the arena URL in `realtime/dashboard/index.html` (`const ARENA_URL = "https://…"`),
-or just open the dashboard with `?arena=<ARENA_URL>` — the "Try the arena →" header
-link appears. The arena also serves the dashboard at `$ARENA/dashboard` (one public URL
+The dashboard's "Try the arena →" link defaults to the relative `/arena` (correct when
+served by the arena at `$ARENA/dashboard`). For the Vercel-hosted copy set
+`const ARENA_URL = "https://…/arena"` in `realtime/dashboard/index.html`, or open it with
+`?arena=<ARENA_URL>/arena`. The arena also serves the dashboard at `$ARENA/dashboard` (one public URL
 for judges).
 
 ## Rollback

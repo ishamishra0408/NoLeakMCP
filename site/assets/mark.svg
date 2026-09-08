@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- No-Leak-MCP mark: a shield, and a conduit that stops. -->
+  <path d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke="#c8a96a" stroke-width="1.75"/>
+  <path d="M16 9v7.5" stroke="#e6edf3" stroke-width="1.75"/>
+  <path d="M11.75 20h8.5" stroke="#e6edf3" stroke-width="1.75"/>
+</svg>

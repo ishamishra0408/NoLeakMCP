@@ -2,7 +2,8 @@
  * No-Leak-MCP hosted arena — HTTP server (Render web service, repo-root rootDir
  * so it can import plugins/* directly). Zero dependencies (Node http only).
  *
- * One public URL. A judge picks a victim model and toggles the guard / chain
+ * One public URL: `/` is the website (site/index.html), `/arena` is the arena
+ * UI. A judge picks a victim model and toggles the guard / chain
  * invariant, clicks Launch attack, and watches a REAL Nebius victim agent read a
  * poisoned Slack thread (simulated Slack tools), read the decoy keyring, and try
  * to exfiltrate it — every outbound tool call scanned by the REAL detector
@@ -29,7 +30,7 @@
  */
 
 import http from "node:http";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -194,6 +195,28 @@ export function createArenaServer(o = {}) {
   const INDEX_HTML = (() => {
     try { return readFileSync(join(HERE, "public", "index.html")); } catch { return Buffer.from("<h1>arena</h1>"); }
   })();
+  // The public website (site/index.html) is served at `/`; the arena UI moved to
+  // `/arena`. site/assets/* (the logo mark) is served under /assets/ — a fixed
+  // allowlist of extensions and a basename-only lookup, so no path traversal.
+  const SITE_DIR = join(REPO_ROOT, "site");
+  // Re-read when the file's mtime changes (one stat per request) so an edit to
+  // the site never needs a restart; the arena UI keeps its boot-time cache.
+  let siteCache = { mtime: 0, body: null };
+  function siteHtml() {
+    try {
+      const f = join(SITE_DIR, "index.html");
+      const m = statSync(f).mtimeMs;
+      if (m !== siteCache.mtime) siteCache = { mtime: m, body: readFileSync(f) };
+      return siteCache.body;
+    } catch { return null; }
+  }
+  const ASSET_TYPES = { ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".webp": "image/webp" };
+  function siteAsset(name) {
+    if (!/^[A-Za-z0-9_.-]+$/.test(name) || name.startsWith(".")) return null;
+    const ext = name.slice(name.lastIndexOf("."));
+    if (!ASSET_TYPES[ext]) return null;
+    try { return { body: readFileSync(join(SITE_DIR, "assets", name)), type: ASSET_TYPES[ext] }; } catch { return null; }
+  }
   // The shared live dashboard (realtime/dashboard/index.html) served from the
   // same origin so judges get one public URL for both. It reads Convex directly.
   const DASHBOARD_HTML = (() => {
@@ -206,8 +229,20 @@ export function createArenaServer(o = {}) {
       const p = u.pathname;
 
       if (p === "/" || p === "/index.html") {
+        // Website at the root; falls back to the arena UI if site/ is not bundled.
+        const site = siteHtml();
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        return res.end(site || INDEX_HTML);
+      }
+      if (p === "/arena" || p === "/arena/" || p === "/arena/index.html") {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         return res.end(INDEX_HTML);
+      }
+      if (p.startsWith("/assets/") && req.method === "GET") {
+        const a = siteAsset(p.slice("/assets/".length));
+        if (!a) return json(res, 404, { error: "not found" });
+        res.writeHead(200, { "content-type": a.type, "cache-control": "public, max-age=86400" });
+        return res.end(a.body);
       }
       if (p === "/dashboard" || p === "/dashboard/") {
         if (!DASHBOARD_HTML) return json(res, 404, { error: "dashboard not bundled" });
