@@ -30,6 +30,12 @@ const DEFAULTS = {
   extraNeedles: [],
   minEncodedRun: 16,
   logPath: "",
+  // Live control: when MCPGUARD_ENABLED is UNSET, the guard polls this URL for
+  // {enabled} and follows it (flip it from the Convex dashboard). Fail-safe: any
+  // error keeps the last known state, defaulting to ON. An explicit
+  // MCPGUARD_ENABLED (0/1) overrides this and is static.
+  controlUrl: "",
+  controlPollMs: 2000,
 };
 
 // ---------------------------------------------------------------------------
@@ -216,11 +222,31 @@ export async function apply(ctx, config) {
   const logger = ctx.logger?.("mcp-guard");
 
   const envToggle = (process.env.MCPGUARD_ENABLED ?? "").trim().toLowerCase();
+  const envSet = envToggle !== "";
+  // Static OFF: explicit env off, or config disabled.
   if (cfg.enabled === false || ["0", "false", "off", "no"].includes(envToggle)) {
     logger?.warn?.("DISABLED — tool-call args are NOT scanned");
     return;
   }
   logger?.info?.("armed (canary tripwire) — tags [%s]; raw+base64+hex+base32+gzip/deflate/brotli+url+nested+byte/char-array+keys", cfg.tags.join(", "));
+
+  // Live control (only when env is UNSET): poll the control URL in the background;
+  // the listener reads `dynamicEnabled` synchronously. Fail-safe: default ON, and
+  // a fetch error keeps the last known value.
+  let dynamicEnabled = true;
+  if (!envSet && cfg.controlUrl) {
+    const poll = async () => {
+      try {
+        const res = await fetch(cfg.controlUrl, { signal: AbortSignal.timeout(1500) });
+        if (res.ok) { const j = await res.json(); if (typeof j.enabled === "boolean") dynamicEnabled = j.enabled; }
+      } catch { /* keep last known (fail-safe) */ }
+    };
+    poll();
+    const timer = setInterval(poll, Math.max(500, cfg.controlPollMs));
+    timer.unref?.();
+    ctx.on?.("dispose", () => clearInterval(timer));
+    logger?.info?.("live control: polling %s every %dms (fail-safe ON)", cfg.controlUrl, cfg.controlPollMs);
+  }
 
   async function audit(entry) {
     if (!cfg.logPath) return;
@@ -229,6 +255,7 @@ export async function apply(ctx, config) {
   }
 
   ctx.on("tools/pre-execute", async (exec, next) => {
+    if (!envSet && !dynamicEnabled) return next(); // live-disabled via the control plane
     const hit = scanArguments(exec.arguments, cfg);
     if (hit) {
       logger?.warn?.("DENY %s — canary via %s at %s (%s)", exec.name, hit.how, hit.path, hit.sample);

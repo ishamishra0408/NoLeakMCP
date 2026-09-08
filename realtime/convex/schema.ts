@@ -50,4 +50,11 @@ export default defineSchema({
     asr: v.number(), // delivered / max(1, evaluable)
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  // Live control switches (e.g. the guard ON/OFF the local plugin polls).
+  control: defineTable({
+    name: v.string(),      // "guard"
+    enabled: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
 });

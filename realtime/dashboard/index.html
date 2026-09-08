@@ -35,6 +35,11 @@
   <span id="conn" class="pill">connecting…</span>
 </header>
 <div class="wrap">
+  <div id="guardctl" class="setup" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <strong>Guard control</strong>
+    <button id="guardBtn" style="min-width:230px">connecting…</button>
+    <span class="muted">Flips the live guard in ~2s — no restart. (Active only when the agent is launched without MCPGUARD_ENABLED.)</span>
+  </div>
   <div id="setup" class="setup" hidden>
     <div style="margin-bottom:8px">Paste your Convex deployment URL (from <code>npx convex dev</code>, e.g. <code>https://xxxx.convex.cloud</code>):</div>
     <input id="url" placeholder="https://your-deployment.convex.cloud" />
@@ -73,6 +78,21 @@
     try { client = new ConvexClient(u); } catch (e) { conn.textContent = "bad URL"; setup.hidden = false; return; }
     conn.textContent = "live ● " + u.replace(/^https?:\/\//, "");
     conn.style.color = "var(--ok)";
+
+    let guardEnabled = null;
+    const gbtn = document.getElementById("guardBtn");
+    client.onUpdate(anyApi.control.guardState, {}, (st) => {
+      guardEnabled = !!st.enabled;
+      gbtn.textContent = guardEnabled ? "🛡️ GUARD: ON — click to DISABLE" : "⚠️ GUARD: OFF — click to ENABLE";
+      gbtn.style.background = guardEnabled ? "var(--ok)" : "var(--bad)";
+      gbtn.style.color = "#04121f";
+    }, () => {});
+    gbtn.onclick = async () => {
+      if (guardEnabled === null) return;
+      gbtn.disabled = true;
+      try { await client.mutation(anyApi.control.setGuard, { enabled: !guardEnabled }); } catch (e) {}
+      setTimeout(() => (gbtn.disabled = false), 400);
+    };
 
     client.onUpdate(anyApi.metrics.summary, {}, (s) => {
       const t = [["events", s.total], ["guard denials", s.denies], ["scorer verdicts", s.verdicts],
