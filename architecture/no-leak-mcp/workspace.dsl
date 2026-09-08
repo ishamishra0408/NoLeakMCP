@@ -68,8 +68,7 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
            victim model and the scorer that judges what the victim ingested, which is what makes the
            headline metric a comparison rather than an anecdote: one plane, one config, bundle off
            then on. */
-        nebius = softwareSystem "Nebius inference" "proposed — hover for details. Serves the victim model and the injection scorer from one plane, so attack-success is measured against a fixed inference substrate." {
-            tags "Proposal"
+        nebius = softwareSystem "Nebius inference" "live — hover for details. Serves the victim model and the injection scorer from one plane, so attack-success is measured against a fixed inference substrate." {
             !adrs adrs-nebius
             perspectives {
                 "Rationale" "Gap in Deepseek Harness\n· the harness names no inference provider; reliability of the victim run is whatever the operator wired\n· a scorer needs a second model call and there is no seat that owns it\n\nvs Claude Code\n· Claude Code is bound to one vendor, so the question does not arise for it\n· here the finding is that a capable-but-not-hardened model obeys, which only means something on a plane you can pin\n\nNow possible\n· attack-success-rate becomes reproducible: same substrate, bundle off then on\n· the scorer stops competing with the victim for a different provider's quota"
@@ -79,8 +78,7 @@ workspace "No-Leak-MCP" "Blocks silent credential exfiltration." {
         /* THE REALTIME PLANE. Not the harness's business and deliberately outside it: the metric has
            to be watchable by several people at once while the run is happening, which is a property
            of the store rather than of the agent. */
-        convex = softwareSystem "Convex realtime" "proposed — hover for details. Holds the live event stream and the attack-success metric, and pushes both to every viewer at once." {
-            tags "Proposal"
+        convex = softwareSystem "Convex realtime" "live — hover for details. Holds the live event stream and the attack-success metric, and pushes both to every viewer at once." {
             !adrs adrs-convex
             perspectives {
                 "Rationale" "Gap in Deepseek Harness\n· the session log is durable and strictly local; nothing publishes it while a run is in flight\n· a second watcher can only tail a file, and sees a different moment from the first\n\nvs Claude Code\n· Claude Code ships OTel metrics and logs to a collector, which is one-way and per-install\n· neither harness has a shared, subscribable view of one run\n\nNow possible\n· two people watch attack-success flip 1 to 0 in the same instant, which is the demo\n· the reactive window index pushes here instead of a poller asking"

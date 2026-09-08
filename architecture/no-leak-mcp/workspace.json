@@ -3,7 +3,7 @@
   "description" : "Blocks silent credential exfiltration.",
   "documentation" : { },
   "id" : 1,
-  "lastModifiedDate" : "2026-09-08T18:42:36Z",
+  "lastModifiedDate" : "2026-09-08T19:03:18Z",
   "model" : {
     "deploymentNodes" : [ {
       "children" : [ {
@@ -13,7 +13,7 @@
           "id" : "80",
           "instanceId" : 1,
           "properties" : {
-            "structurizr.dsl.identifier" : "1e467042-c68d-439f-807b-b1383c21644a"
+            "structurizr.dsl.identifier" : "5bb534ae-1e81-464b-a8c5-d02e1f1d9016"
           },
           "relationships" : [ {
             "description" : "Appends the poisoned result to",
@@ -72,7 +72,7 @@
           "id" : "81",
           "instanceId" : 1,
           "properties" : {
-            "structurizr.dsl.identifier" : "83e8a047-71b6-4603-8bbd-c354e323ffcb"
+            "structurizr.dsl.identifier" : "e7da09f0-e18f-4a9e-8ee0-cef397d57747"
           },
           "relationships" : [ {
             "description" : "Hands the redacted record to",
@@ -96,7 +96,7 @@
           "id" : "86",
           "instanceId" : 1,
           "properties" : {
-            "structurizr.dsl.identifier" : "d45b2a8b-bfcf-46d3-95fb-d44fbdb34660"
+            "structurizr.dsl.identifier" : "3aae58ce-acc3-44ab-b4e8-1c63f36ec488"
           },
           "relationships" : [ {
             "description" : "Fails the chain invariant and denies the post to",
@@ -147,7 +147,7 @@
           "id" : "90",
           "instanceId" : 1,
           "properties" : {
-            "structurizr.dsl.identifier" : "432bfaab-6669-4013-b97e-7597c1694d10"
+            "structurizr.dsl.identifier" : "ffbd340e-cedd-4fb7-a3e4-2d6da2c6799e"
           },
           "relationships" : [ {
             "description" : "Pushes a completed read-then-post window to",
@@ -172,7 +172,7 @@
         "instances" : "1",
         "name" : "dsh 0.1.1-rc.2",
         "properties" : {
-          "structurizr.dsl.identifier" : "d8559c53-1e91-4758-bdc7-a48551e28542"
+          "structurizr.dsl.identifier" : "0fe1a174-cde8-4e21-824c-a3d4d5fa03cc"
         },
         "tags" : "Element,Deployment Node",
         "technology" : "Node"
@@ -183,7 +183,7 @@
       "instances" : "1",
       "name" : "Engineer B laptop",
       "properties" : {
-        "structurizr.dsl.identifier" : "99a30e8b-27e3-43a0-ae2f-8e603f8f068e"
+        "structurizr.dsl.identifier" : "c5909dde-b7cb-441e-bf0b-65d54ebdfcc1"
       },
       "tags" : "Element,Deployment Node",
       "technology" : "macOS"
@@ -194,14 +194,14 @@
       "instances" : "1",
       "name" : "Engineer A laptop",
       "properties" : {
-        "structurizr.dsl.identifier" : "05bf4d59-042c-4604-a0f3-289c64cebd45"
+        "structurizr.dsl.identifier" : "5a562815-6a08-4194-a388-20af8269bc88"
       },
       "softwareSystemInstances" : [ {
         "environment" : "Live",
         "id" : "94",
         "instanceId" : 1,
         "properties" : {
-          "structurizr.dsl.identifier" : "637d6640-41a8-4290-b6f3-49d4a0307af6"
+          "structurizr.dsl.identifier" : "a5a5ea03-f94f-4114-9813-4f55c4c36df8"
         },
         "relationships" : [ {
           "description" : "Posts hidden instructions to",
@@ -224,14 +224,14 @@
         "instances" : "1",
         "name" : "OTLP collector",
         "properties" : {
-          "structurizr.dsl.identifier" : "cbfcf061-bb35-4dfc-84be-a4256a1cc711"
+          "structurizr.dsl.identifier" : "3b5e7844-248c-47bf-b07f-1763c172b380"
         },
         "softwareSystemInstances" : [ {
           "environment" : "Live",
           "id" : "97",
           "instanceId" : 1,
           "properties" : {
-            "structurizr.dsl.identifier" : "f12a2393-40d9-40c3-bb0d-f0735962b20e"
+            "structurizr.dsl.identifier" : "435dec0d-5e66-4120-aa61-e52670144bae"
           },
           "relationships" : [ {
             "description" : "routes hosts and canary hashes to",
@@ -252,14 +252,14 @@
         "instances" : "1",
         "name" : "Attacker listener host",
         "properties" : {
-          "structurizr.dsl.identifier" : "4dfc65ea-5b48-493b-8053-65f725728c7d"
+          "structurizr.dsl.identifier" : "8acab197-9666-4130-9865-63191833341e"
         },
         "softwareSystemInstances" : [ {
           "environment" : "Live",
           "id" : "101",
           "instanceId" : 1,
           "properties" : {
-            "structurizr.dsl.identifier" : "5c11c608-41ad-45e3-ae43-86511a22eba5"
+            "structurizr.dsl.identifier" : "08ebaa9d-65a2-49b8-b3d3-39c023ae1bc0"
           },
           "softwareSystemId" : "4",
           "tags" : "Software System Instance"
@@ -276,7 +276,7 @@
         "id" : "99",
         "name" : "Detection worker",
         "properties" : {
-          "structurizr.dsl.identifier" : "b75e1183-479d-4d67-8519-537c4fa9fe6c"
+          "structurizr.dsl.identifier" : "891a73cc-3e86-4c63-bc0f-d9014808963a"
         },
         "tags" : "Element,Infrastructure Node",
         "technology" : "background worker"
@@ -284,7 +284,7 @@
       "instances" : "1",
       "name" : "Render",
       "properties" : {
-        "structurizr.dsl.identifier" : "0389388d-6df8-452f-b996-142ad472c5c9"
+        "structurizr.dsl.identifier" : "d5baec0c-aa62-4791-afc1-a21d19d9973d"
       },
       "tags" : "Element,Deployment Node",
       "technology" : "PaaS"
@@ -295,14 +295,14 @@
       "instances" : "1",
       "name" : "Nebius",
       "properties" : {
-        "structurizr.dsl.identifier" : "b7ab65bc-327f-4d56-bc0a-b1e140aa245c"
+        "structurizr.dsl.identifier" : "741eebdf-ffbe-4daa-b3dd-fa4bb3d7bacd"
       },
       "softwareSystemInstances" : [ {
         "environment" : "Live",
         "id" : "103",
         "instanceId" : 1,
         "properties" : {
-          "structurizr.dsl.identifier" : "bba7b4ab-878e-4bbc-b5ec-d48481184b73"
+          "structurizr.dsl.identifier" : "def84b84-0f29-45fe-96a2-1a58e4e2d302"
         },
         "softwareSystemId" : "7",
         "tags" : "Software System Instance"
@@ -316,14 +316,14 @@
       "instances" : "1",
       "name" : "Convex",
       "properties" : {
-        "structurizr.dsl.identifier" : "c7b53afb-c558-4566-9803-0cb3e0c24cf3"
+        "structurizr.dsl.identifier" : "b6e3469a-294c-411e-a3c3-0b47cdd3334d"
       },
       "softwareSystemInstances" : [ {
         "environment" : "Live",
         "id" : "108",
         "instanceId" : 1,
         "properties" : {
-          "structurizr.dsl.identifier" : "a5b54e1e-0270-4cb5-b07f-acfa38dcc5e1"
+          "structurizr.dsl.identifier" : "a82cc7c0-3c56-4535-83dc-32f501f105b1"
         },
         "softwareSystemId" : "8",
         "tags" : "Software System Instance"
@@ -337,7 +337,7 @@
         "id" : "112",
         "instanceId" : 1,
         "properties" : {
-          "structurizr.dsl.identifier" : "90599552-443d-453a-8552-a55136aa342a"
+          "structurizr.dsl.identifier" : "7a0a0d44-3c07-426a-99d8-b42698a311bc"
         },
         "relationships" : [ {
           "description" : "Returns the poisoned channel to",
@@ -360,7 +360,7 @@
         "id" : "116",
         "instanceId" : 1,
         "properties" : {
-          "structurizr.dsl.identifier" : "fbc4c354-a6dc-4622-86a1-2716e3bacd56"
+          "structurizr.dsl.identifier" : "44701eac-ba8e-4799-8ebd-772968d5c468"
         },
         "relationships" : [ {
           "description" : "Fetches the url server-side from",
@@ -378,7 +378,7 @@
       "instances" : "1",
       "name" : "Slack infrastructure",
       "properties" : {
-        "structurizr.dsl.identifier" : "5e0a4054-4733-40e9-83e2-c0444e76bfcc"
+        "structurizr.dsl.identifier" : "5f692fc4-6d2b-4891-8e59-3f89ec2e1ec9"
       },
       "tags" : "Element,Deployment Node",
       "technology" : "SaaS"
@@ -389,14 +389,14 @@
       "instances" : "1",
       "name" : "Corporate egress",
       "properties" : {
-        "structurizr.dsl.identifier" : "7beaa2c5-6609-4102-9a3f-02d33ac6b8e9"
+        "structurizr.dsl.identifier" : "e555a0b2-3d9b-41fe-822c-021f2dea87b5"
       },
       "softwareSystemInstances" : [ {
         "environment" : "Live",
         "id" : "120",
         "instanceId" : 1,
         "properties" : {
-          "structurizr.dsl.identifier" : "14c6a801-82c4-4671-bab8-30dc2502971b"
+          "structurizr.dsl.identifier" : "a1b4f801-e4a9-49f3-b126-05b45f433daa"
         },
         "softwareSystemId" : "5",
         "tags" : "Software System Instance"
@@ -532,7 +532,7 @@
       } ],
       "tags" : "Element,Software System,Existing System"
     }, {
-      "description" : "proposed — hover for details. Serves the victim model and the injection scorer from one plane, so attack-success is measured against a fixed inference substrate.",
+      "description" : "live — hover for details. Serves the victim model and the injection scorer from one plane, so attack-success is measured against a fixed inference substrate.",
       "documentation" : {
         "decisions" : [ {
           "content" : "# 1. One inference plane serves both the victim and the scorer\n\nDate: 2026-09-05\n\n## Status\n\nAccepted\n\n## Context\n\nThe finding this project rests on is that a capable-but-not-safety-hardened model obeys the\ninjection while Claude refuses it, 4 of 4. That is a claim about models, so it only means something\nagainst a fixed inference substrate: if the victim run and the scoring run sit on different\nproviders, an attack-success number is a statement about two vendors' availability rather than about\nthe guard.\n\nThe harness names no inference provider. Whatever the operator wired is what runs, and the scorer —\nwhich needs a second model call on every ingested message — has no seat that owns it at all.\n\n## Decision\n\nOne managed inference plane serves both the victim model and the injection scorer. The headline\nmetric is then a comparison on one substrate: same provider, same config, bundle off then on.\n\n## Consequences\n\nThe provider becomes a single point of failure for the demo, which is accepted: a run that cannot\nreach inference reports UNEVALUABLE rather than a success of 0, and a 0 that means \"the model was\nunreachable\" is the one result that would falsely flatter the guard.\n\nIt also couples the scorer's cost to the victim's traffic. That is the honest shape — the scorer\nreads everything the agent ingests — and it is why the scorer is a scoring call rather than a second\nagent.\n",
@@ -552,9 +552,9 @@
       "properties" : {
         "structurizr.dsl.identifier" : "nebius"
       },
-      "tags" : "Element,Software System,Proposal"
+      "tags" : "Element,Software System"
     }, {
-      "description" : "proposed — hover for details. Holds the live event stream and the attack-success metric, and pushes both to every viewer at once.",
+      "description" : "live — hover for details. Holds the live event stream and the attack-success metric, and pushes both to every viewer at once.",
       "documentation" : {
         "decisions" : [ {
           "content" : "# 1. The realtime metric lives outside the harness\n\nDate: 2026-09-05\n\n## Status\n\nAccepted\n\n## Context\n\nThe session log is durable, strictly local, and written before anyone asks — which is what makes the\nchain invariant provable after the fact. It is the wrong shape for the thing that has to be watched\nWHILE a run is happening. A second person tailing the same file sees a different moment from the\nfirst, and neither can be pointed at.\n\nClaude Code ships OTel metrics and logs to a collector, which is one-way and per-install. Neither\nharness has a shared, subscribable view of a single run.\n\n## Decision\n\nA hosted reactive database holds the live event stream and the attack-success metric, and every\nviewer subscribes to it. The reactive window index publishes to it rather than a poller asking.\n\nThe harness keeps its local log as the source of truth; this plane is a projection and may be\nrebuilt from it.\n\n## Consequences\n\nTwo people watch attack-success flip 1 to 0 in the same instant, which is the demonstration. The\ncost is a second store that can disagree with the log; it is accepted because the log stays\nauthoritative and the projection is rebuildable from it, so a disagreement is a bug in the\nprojection and never a lost fact.\n",
@@ -574,7 +574,7 @@
       "properties" : {
         "structurizr.dsl.identifier" : "convex"
       },
-      "tags" : "Element,Software System,Proposal"
+      "tags" : "Element,Software System"
     }, {
       "containers" : [ {
         "description" : "Channels and MCP server: where the poisoned message is planted and the unfurl link is posted.",
