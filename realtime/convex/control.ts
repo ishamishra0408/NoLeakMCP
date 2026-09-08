@@ -19,3 +19,20 @@ export const guardState = query({
     return { enabled: row ? row.enabled : true, updatedAt: row?.updatedAt ?? 0 };
   },
 });
+
+export const setInvariant = mutation({
+  args: { enabled: v.boolean() },
+  handler: async (ctx, { enabled }) => {
+    const row = await ctx.db.query("control").withIndex("by_name", (q) => q.eq("name", "invariant")).unique();
+    if (row) await ctx.db.patch(row._id, { enabled, updatedAt: Date.now() });
+    else await ctx.db.insert("control", { name: "invariant", enabled, updatedAt: Date.now() });
+  },
+});
+
+export const invariantState = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db.query("control").withIndex("by_name", (q) => q.eq("name", "invariant")).unique();
+    return { enabled: row ? row.enabled : false, updatedAt: row?.updatedAt ?? 0 };
+  },
+});

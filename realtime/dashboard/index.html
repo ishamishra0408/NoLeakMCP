@@ -36,9 +36,10 @@
 </header>
 <div class="wrap">
   <div id="guardctl" class="setup" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <strong>Guard control</strong>
+    <strong>Defense control</strong>
     <button id="guardBtn" style="min-width:230px">connecting…</button>
-    <span class="muted">Flips the live guard in ~2s — no restart. (Active only when the agent is launched without MCPGUARD_ENABLED.)</span>
+    <button id="invBtn" style="min-width:260px">connecting…</button>
+    <span class="muted">Flip live in ~2s — no restart. Guard = canary tripwire (built). Invariant = tagless provenance (proposed) — catches untagged secrets by tracking read→post.</span>
   </div>
   <div id="setup" class="setup" hidden>
     <div style="margin-bottom:8px">Paste your Convex deployment URL (from <code>npx convex dev</code>, e.g. <code>https://xxxx.convex.cloud</code>):</div>
@@ -92,6 +93,21 @@
       gbtn.disabled = true;
       try { await client.mutation(anyApi.control.setGuard, { enabled: !guardEnabled }); } catch (e) {}
       setTimeout(() => (gbtn.disabled = false), 400);
+    };
+
+    let invEnabled = null;
+    const ibtn = document.getElementById("invBtn");
+    client.onUpdate(anyApi.control.invariantState, {}, (st) => {
+      invEnabled = !!st.enabled;
+      ibtn.textContent = invEnabled ? "🔗 INVARIANT: ON — click to DISABLE" : "🔗 INVARIANT: OFF (proposed) — click to ENABLE";
+      ibtn.style.background = invEnabled ? "var(--ok)" : "var(--surface-2, #333a44)";
+      ibtn.style.color = invEnabled ? "#04121f" : "var(--ink)";
+    }, () => {});
+    ibtn.onclick = async () => {
+      if (invEnabled === null) return;
+      ibtn.disabled = true;
+      try { await client.mutation(anyApi.control.setInvariant, { enabled: !invEnabled }); } catch (e) {}
+      setTimeout(() => (ibtn.disabled = false), 400);
     };
 
     client.onUpdate(anyApi.metrics.summary, {}, (s) => {
