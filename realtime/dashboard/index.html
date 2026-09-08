@@ -58,7 +58,7 @@
   const esc = (v) => String(v==null?"":v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const q = new URLSearchParams(location.search);
   const ls = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
-  let url = q.get("url") || ls.get("convexUrl") || "";
+  let url = q.get("url") || ls.get("convexUrl") || "https://good-firefly-220.convex.cloud";
   const conn = document.getElementById("conn");
   const setup = document.getElementById("setup");
   document.getElementById("save").onclick = () => {
