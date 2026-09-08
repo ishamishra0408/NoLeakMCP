@@ -41,3 +41,36 @@ services:
           envVarKey: INGEST_TOKEN
       - key: CONVEX_URL
         sync: false   # paste your Convex deployment URL in the Render dashboard
+
+  # The public, judge-runnable ARENA. Node web service, rootDir = REPO ROOT
+  # (rootDir omitted) so it can import plugins/* directly — the REAL detector
+  # functions, not copies. Zero deps → no buildCommand. Simulated Slack surface +
+  # simulated agent loop, real detectors, real Nebius victim model. Not dsh.
+  - type: web
+    name: noleak-arena
+    runtime: node
+    plan: starter
+    startCommand: node render/arena/server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: NEBIUS_API_KEY
+        sync: false   # victim + scorer inference (paste in the Render dashboard)
+      - key: CONVEX_URL
+        sync: false   # shared live feed (same deployment the dashboard reads)
+      - key: NOLEAK_SECRET
+        sync: false   # gates the admin reset-limits endpoint
+      - key: COLLECTOR_URL
+        fromService:
+          type: web
+          name: noleak-collector
+          property: hostport   # durable drop + event ingress on the private network
+      - key: INGEST_TOKEN
+        fromService:
+          type: web
+          name: noleak-collector
+          envVarKey: INGEST_TOKEN
+      - key: ARENA_PUBLIC_URL
+        fromService:
+          type: web
+          name: noleak-arena
+          property: host   # public hostname; used to build the verifiable drop URL

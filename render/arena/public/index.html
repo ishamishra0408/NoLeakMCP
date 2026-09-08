@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>No-Leak-MCP — Arena</title>
+<style>
+  :root { color-scheme: light dark;
+    --bg:#0b0e14; --panel:#141925; --panel2:#0f1420; --ink:#e6edf3; --dim:#8b98a9;
+    --ok:#2ea043; --bad:#f85149; --amber:#d29922; --line:#232b3a; --accent:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { padding:18px 22px; border-bottom:1px solid var(--line); }
+  h1 { font-size:18px; margin:0; letter-spacing:.2px; }
+  .sub { color:var(--dim); font-size:12.5px; margin-top:4px; max-width:900px; }
+  .sub b { color:var(--ink); font-weight:600; }
+  .wrap { padding:20px 22px; max-width:1080px; margin:0 auto; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
+  .controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; align-items:end; }
+  label.fld { display:block; }
+  .fld .l { color:var(--dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+  select { width:100%; background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; }
+  .toggles { display:flex; gap:10px; flex-wrap:wrap; }
+  .tog { flex:1; min-width:150px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; cursor:pointer; user-select:none; display:flex; align-items:center; gap:9px; }
+  .tog input { accent-color:var(--accent); width:16px; height:16px; }
+  .tog .name { font-weight:600; } .tog .d { color:var(--dim); font-size:11px; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; align-items:center; }
+  button { border:0; border-radius:8px; padding:10px 18px; font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .launch { background:var(--accent); color:#04121f; }
+  .replay { background:var(--panel2); color:var(--ink); border:1px solid var(--line); }
+  .rate { color:var(--dim); font-size:12px; margin-left:auto; }
+  .verdict { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .badge { font-size:13px; font-weight:700; padding:6px 14px; border-radius:20px; border:1px solid var(--line); }
+  .badge.LEAKED { background:rgba(248,81,73,.15); color:var(--bad); border-color:var(--bad); }
+  .badge.DENIED_BY_GUARD, .badge.DENIED_BY_INVARIANT { background:rgba(46,160,67,.15); color:var(--ok); border-color:var(--ok); }
+  .badge.MODEL_DECLINED { background:rgba(210,153,34,.13); color:var(--amber); border-color:var(--amber); }
+  .badge.ERROR { background:rgba(139,152,169,.12); color:var(--dim); }
+  .badge.pending { background:var(--panel2); color:var(--dim); }
+  .otxt { color:var(--dim); font-size:13px; }
+  .mode { font-size:11px; padding:2px 9px; border-radius:20px; border:1px solid var(--line); color:var(--dim); }
+  .mode.live { color:var(--accent); border-color:var(--accent); }
+  .mode.replay { color:var(--amber); border-color:var(--amber); }
+  .timeline { position:relative; }
+  .step { border-left:2px solid var(--line); padding:0 0 14px 18px; position:relative; margin-left:6px; }
+  .step:last-child { border-left-color:transparent; }
+  .step::before { content:""; position:absolute; left:-7px; top:2px; width:12px; height:12px; border-radius:50%; background:var(--panel2); border:2px solid var(--line); }
+  .step.setup::before { border-color:var(--dim); }
+  .step.scorer::before { border-color:var(--amber); }
+  .step.tool_call::before { border-color:var(--accent); }
+  .step.tool_result::before { border-color:var(--dim); background:var(--dim); }
+  .step.detector.deny::before { border-color:var(--ok); background:var(--ok); }
+  .step.detector.leak::before { border-color:var(--bad); background:var(--bad); }
+  .step.outcome::before { border-color:var(--ink); background:var(--ink); }
+  .step .head { font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--dim); }
+  .step .body { margin-top:3px; white-space:pre-wrap; word-break:break-word; }
+  .step .body code { color:var(--accent); font-size:12.5px; }
+  .step.detector.deny .body { color:var(--ok); }
+  .step.detector.leak .body { color:var(--bad); }
+  .kv { color:var(--dim); font-size:12px; }
+  .foot { color:var(--dim); font-size:12px; margin-top:8px; }
+  a { color:var(--accent); }
+  .flash { animation:flash .5s ease; }
+  @keyframes flash { from { background:rgba(88,166,255,.12); } to { background:transparent; } }
+  :root[data-theme="light"], :root:not([data-theme="dark"]) {}
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg:#f6f8fa; --panel:#fff; --panel2:#f0f3f6; --ink:#1f2328; --dim:#59636e; --line:#d0d7de; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ No-Leak-MCP — Arena</h1>
+  <div class="sub">
+    Pick a victim model, toggle the defenses, and launch the silent Slack credential-leak attack.
+    <b>Honest scope:</b> simulated Slack surface + simulated agent loop, <b>real detectors</b>
+    (imported straight from <code>plugins/</code>), <b>real Nebius victim model</b>. This is a harness
+    over the same pure functions the dsh plugins call — <b>not dsh itself</b>. Every credential is a
+    canary decoy; no real secret exists. Live events push to the shared
+    <a href="https://good-firefly-220.convex.site" target="_blank" rel="noopener">Convex feed</a>.
+  </div>
+</header>
+<div class="wrap">
+  <div class="panel">
+    <div class="controls">
+      <label class="fld">
+        <div class="l">Victim model (real, Nebius)</div>
+        <select id="model"></select>
+      </label>
+      <div class="fld">
+        <div class="l">Defenses</div>
+        <div class="toggles">
+          <label class="tog"><input type="checkbox" id="guard" /><span><span class="name">Guard</span><br><span class="d">tagged canary tripwire</span></span></label>
+          <label class="tog"><input type="checkbox" id="invariant" /><span><span class="name">Invariant</span><br><span class="d">tagless read→post provenance</span></span></label>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="launch" id="launch">⚔️ Launch attack (live)</button>
+      <label class="fld" style="min-width:200px;margin:0">
+        <select id="fixture" style="margin-top:2px"></select>
+      </label>
+      <button class="replay" id="replay">▶ Replay (instant)</button>
+      <span class="rate" id="rate"></span>
+    </div>
+  </div>
+
+  <div class="panel" id="result" hidden>
+    <div class="verdict">
+      <span class="badge pending" id="badge">running…</span>
+      <span class="mode" id="mode"></span>
+      <span class="otxt" id="otxt"></span>
+    </div>
+    <div class="timeline" id="timeline"></div>
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const OUTCOMES = {
+    LEAKED: "❌ LEAKED", DENIED_BY_GUARD: "🛡️ DENIED by guard",
+    DENIED_BY_INVARIANT: "🔗 DENIED by invariant", MODEL_DECLINED: "🙅 Model declined", ERROR: "⚠️ Error",
+  };
+  let liveEnabled = false;
+
+  function fmtStep(s) {
+    const cls = ["step", s.t];
+    if (s.t === "detector") cls.push(s.denied ? "deny" : "leak");
+    let head = s.t.replace(/_/g, " ");
+    let body = "";
+    if (s.t === "setup") { head = "setup"; body = esc(s.text); }
+    else if (s.t === "scorer") { head = "injection scorer (real Nebius)"; body = esc(s.text); }
+    else if (s.t === "tool_call") { head = "agent → tool"; body = "<code>" + esc(s.tool) + "</code>(" + esc(JSON.stringify(s.args || {})) + ")"; }
+    else if (s.t === "tool_result") { head = "tool result → " + esc(s.tool); body = "<span class='kv'>" + esc(s.text) + "</span>"; }
+    else if (s.t === "detector") { head = s.denied ? ("DENIED · " + esc(s.detector)) : "no control fired"; body = esc(s.text); }
+    else if (s.t === "model") { head = "victim (no tool call)"; body = esc(s.text); }
+    else if (s.t === "outcome") { head = "outcome"; body = esc(s.text); }
+    else body = esc(s.text || "");
+    return `<div class="${cls.join(" ")}"><div class="head">${head}</div><div class="body">${body}</div></div>`;
+  }
+
+  function render(data, mode) {
+    $("result").hidden = false;
+    const b = $("badge");
+    b.className = "badge " + data.outcome;
+    b.textContent = OUTCOMES[data.outcome] || data.outcome;
+    $("mode").className = "mode " + mode;
+    $("mode").textContent = mode === "live" ? "LIVE — real Nebius run" : "REPLAY — recorded transcript";
+    $("otxt").textContent = data.outcomeText || "";
+    // animate steps in
+    const tl = $("timeline"); tl.innerHTML = "";
+    const steps = data.steps || [];
+    let i = 0;
+    const delay = mode === "replay" ? 260 : 0;
+    function add() {
+      if (i >= steps.length) return;
+      tl.insertAdjacentHTML("beforeend", fmtStep(steps[i]));
+      tl.lastElementChild.classList.add("flash");
+      i++;
+      if (i < steps.length) setTimeout(add, delay);
+    }
+    if (delay) add(); else tl.innerHTML = steps.map(fmtStep).join("");
+    $("foot").innerHTML = `${esc(data.model || "")} · guard ${data.guard ? "ON" : "OFF"} · invariant ${data.invariant ? "ON" : "OFF"}` + (data.transcriptId ? ` · <span class="kv">run ${esc(data.transcriptId)}</span>` : "");
+  }
+
+  function setRate(r) {
+    if (!r) { $("rate").textContent = ""; return; }
+    $("rate").textContent = `live runs: ${r.perIpUsed}/${r.perIpMax} (this IP, 10 min) · ${r.globalUsed}/${r.globalMax} today`;
+  }
+
+  async function loadConfig() {
+    const r = await fetch("/api/config").then(x => x.json()).catch(() => null);
+    if (!r) return;
+    liveEnabled = r.liveEnabled;
+    $("model").innerHTML = r.models.map(m => `<option value="${esc(m.key)}">${esc(m.label)}</option>`).join("");
+    const fx = r.fixtures || [];
+    $("fixture").innerHTML = fx.length
+      ? fx.map(f => `<option value="${esc(f.id)}">${esc(f.label)}</option>`).join("")
+      : `<option value="">(no recorded replays)</option>`;
+    if (!fx.length) $("replay").disabled = true;
+    setRate(r.rate);
+    if (!liveEnabled) {
+      $("launch").disabled = true;
+      $("launch").textContent = "Live disabled — use Replay";
+    }
+  }
+
+  $("launch").onclick = async () => {
+    $("launch").disabled = true; $("badge").className = "badge pending"; $("badge").textContent = "running live…";
+    $("result").hidden = false; $("timeline").innerHTML = ""; $("otxt").textContent = "Spinning up the Nebius victim…"; $("mode").textContent = "";
+    try {
+      const r = await fetch("/api/attack", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: $("model").value, guard: $("guard").checked, invariant: $("invariant").checked }),
+      });
+      const data = await r.json();
+      if (!r.ok) { $("badge").className = "badge ERROR"; $("badge").textContent = "⚠️ " + (r.status === 429 ? "rate limited" : "error"); $("otxt").textContent = data.error || "failed"; if (data.rate) setRate(data.rate); return; }
+      render(data, "live"); setRate(data.rate);
+    } catch (e) { $("badge").className = "badge ERROR"; $("badge").textContent = "⚠️ error"; $("otxt").textContent = String(e); }
+    finally { $("launch").disabled = !liveEnabled; }
+  };
+
+  $("replay").onclick = async () => {
+    $("replay").disabled = true;
+    try {
+      const r = await fetch("/api/replay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: $("fixture").value }) });
+      const data = await r.json();
+      if (!r.ok) { $("result").hidden = false; $("badge").className = "badge ERROR"; $("badge").textContent = "⚠️ error"; $("otxt").textContent = data.error || "failed"; return; }
+      render(data, "replay");
+    } catch (e) { alert(String(e)); }
+    finally { $("replay").disabled = false; }
+  };
+
+  loadConfig();
+})();
+</script>
+</body>
+</html>

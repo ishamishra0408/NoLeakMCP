@@ -59,11 +59,25 @@ Nothing above is submitted as event work.
 - This commit — tags `pre-event` / `event-start`, this changelog, MIT `LICENSE`, `.mailmap`, and the
   **dsh mount config** (`dsh/`) so the product is installable from the repo, not only from one laptop.
 
+### 2026-09-08 — hosted arena (public, judge-runnable build)
+- `render/arena/` — a third Render web service (`noleak-arena`) mounted at the **repo root**
+  (`rootDir` omitted) so it imports `plugins/*` directly: the **real** detector functions, not
+  copies. A judge picks a victim model (Nemotron 3 Super 120B / Llama 3.3 70B, live on Nebius) and
+  toggles guard/invariant, then launches the silent Slack credential-leak attack against a real
+  Nebius agent over a **simulated** Slack surface + agent loop. Outcome ∈ LEAKED / DENIED_BY_GUARD /
+  DENIED_BY_INVARIANT / MODEL_DECLINED. Live runs are rate-limited (6/IP/10 min, 200/day) and push
+  to the shared Convex feed + the durable collector; a Replay button plays recorded transcripts
+  instantly. Four fixtures recorded from real Nebius runs (both models leak with defenses off; guard
+  and invariant each deny with the matching toggle on). Honestly labelled throughout: simulated
+  Slack + agent loop, real detectors, real Nebius model — **not dsh**.
+
 ## Still owed before submission (tracked, not hidden)
 - Slack-surface `guard/deny` line and Beeceptor leak-vs-dark captures (audit log was reset before
   they were copied out).
 - `INV-DENY` row captured on the hosted dashboard.
-- A public, judge-runnable build (planned: hosted arena on Render) and a real Render deploy log.
+- A real Render deploy log for the three services (the arena build itself is done: `render/arena/`,
+  wired into `render.yaml`, verified end-to-end locally — live Nebius run → Convex feed + durable
+  collector drop).
 - Render Workflows port, or withdrawal of that entry — decision 2026-09-10.
 
 ## Credits
