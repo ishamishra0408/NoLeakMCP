@@ -133,6 +133,7 @@
       const row = (e) => {
         const time = new Date(e.ts).toLocaleTimeString();
         if (e.kind === "guard/deny") return `<tr><td><span class="k deny">DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · ${esc(e.how)} <span class="muted">${esc(e.marker)}</span></td></tr>`;
+        if (e.kind === "invariant/deny") return `<tr><td><span class="k deny">INV-DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · provenance · ${esc(e.how)}</td></tr>`;
         if (e.kind === "scorer/verdict") return `<tr><td><span class="k verdict">${e.injection?"INJECTION":"clean"}</span> <span class="muted">${time}</span> ${esc(e.tool)} · score ${typeof e.score==="number"?e.score.toFixed(2):"?"} <span class="muted">${esc((e.labels||[]).join(", "))}</span></td></tr>`;
         if (e.kind === "trial") return `<tr><td><span class="k trial">TRIAL</span> <span class="muted">${time}</span> ${esc(e.model)} · ${esc(e.style)} · guard ${esc(e.guard)} → ${e.delivered?"delivered":e.unevaluable?"unevaluable":"blocked"}</td></tr>`;
         return `<tr><td class="muted">${time} ${esc(e.kind)}</td></tr>`;

@@ -77,6 +77,7 @@ async function sendTrial(t) {
 
 const SOURCES = [
   { path: join(HOME, ".dsh/mcp-guard.log.jsonl"), handler: sendEvent, label: "guard" },
+  { path: join(HOME, ".dsh/mcp-invariant.log.jsonl"), handler: sendEvent, label: "invariant" },
   { path: join(HOME, ".dsh/mcp-guard.scores.jsonl"), handler: sendEvent, label: "scorer" },
   { path: join(REALTIME, "..", "eval", "out", "trials.jsonl"), handler: sendTrial, label: "trials" },
 ];
