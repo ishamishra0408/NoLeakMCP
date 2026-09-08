@@ -11,7 +11,7 @@ Write endpoints require `x-noleak-token` when `INGEST_TOKEN` is set (the bluepri
 
 ## Deploy
 
-Push the repo to GitHub, then Render → **New → Blueprint** → pick this repo (`render/render.yaml`). Set `CONVEX_URL` on the worker in the Render dashboard. `$50` credit covers both starter services.
+Push the repo to GitHub, then Render → **New → Blueprint** → pick this repo (`render.yaml` (repo root)). Set `CONVEX_URL` on the worker in the Render dashboard. `$50` credit covers both starter services.
 
 ## Prove the recovery locally (no Render needed)
 
