@@ -1,0 +1,24 @@
+# No-Leak-MCP — the Nebius provider block for ~/.dsh/settings.yaml (merge under llm-pi-ai.providers).
+# This is the part of the victim wiring that used to live only on one laptop. No secret here:
+# apiKeyEnv names the environment variable dsh reads; export NEBIUS_API_KEY yourself.
+llm-pi-ai:
+  providers:
+    nebius:
+      displayName: Nebius Token Factory
+      api: openai-completions
+      baseURL: https://api.tokenfactory.nebius.com/v1/
+      apiKeyEnv: NEBIUS_API_KEY
+      defaultContextWindow: 131072
+      compat:
+        supportsStore: false
+        maxTokensField: max_tokens
+      models:
+        - id: nvidia/nemotron-3-super-120b-a12b
+          name: Nemotron 3 Super 120B (Nebius · victim · un-hardened)
+        - id: meta-llama/Llama-3.3-70B-Instruct
+          name: Llama 3.3 70B (Nebius · victim)
+        - id: Qwen/Qwen3-30B-A3B-Instruct-2507
+          name: Qwen3 30B A3B (Nebius · injection-scorer)
+agent-default-model:
+  provider: nebius
+  model: nvidia/nemotron-3-super-120b-a12b

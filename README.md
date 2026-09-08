@@ -179,8 +179,9 @@ source, and does not document MCP/telemetry/session internals):
 | `diagrams/` | Pre-event C4 dynamic views (`component-view.html`, `container-view.html`) and their generators. | **Sep 4 (pre-event)** |
 | `proposalIM.md` | The Sep 5 handoff brief. Superseded by this README; kept as the record of the plan. | Sep 5 |
 | `tools/` | Attacker-side harvester + mock rig used to reproduce the leak. | Sep 5 |
+| `dsh/` | **Install from the repo:** the two profile patch layers (`web`, `headless`) and the Nebius provider block, redacted of secrets, plus a two-minute install guide. The product was previously installable only from one laptop's `~/.dsh`. | Sep 8 |
 
-Provenance: the only pre-event commit is `b0ada31` (2026-09-04): the analysis README and `diagrams/`. Everything else was built during the event (Sep 5–8). The harness itself, `@deepseek-ai/dsh` 0.1.1-rc.2, is third-party and unmodified — every control is a registration in a seat it already exposes.
+Provenance: the only pre-event commit is `b0ada31` (2026-09-04), tagged **`pre-event`**: the analysis README and `diagrams/`. The first in-event commit is `f0878d0`, tagged **`event-start`**; `git diff pre-event..HEAD --stat` is the complete in-event delta, itemised in [`CHANGELOG.md`](CHANGELOG.md). The harness itself, `@deepseek-ai/dsh` 0.1.1-rc.2, is third-party and unmodified — every control is a registration in a seat it already exposes. License: MIT (`LICENSE`).
 
 ---
 
