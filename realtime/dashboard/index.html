@@ -39,7 +39,7 @@
     <strong>Defense control</strong>
     <button id="guardBtn" style="min-width:230px">connecting…</button>
     <button id="invBtn" style="min-width:260px">connecting…</button>
-    <span class="muted">Flip live in ~2s — no restart. Guard = canary tripwire (built). Invariant = tagless provenance (proposed) — catches untagged secrets by tracking read→post.</span>
+    <span class="muted">Flip live in ~2s — no restart. Guard = canary tripwire (built). Invariant = tagless provenance (built) — catches untagged secrets by tracking read→post.</span>
   </div>
   <div id="setup" class="setup" hidden>
     <div style="margin-bottom:8px">Paste your Convex deployment URL (from <code>npx convex dev</code>, e.g. <code>https://xxxx.convex.cloud</code>):</div>
@@ -99,7 +99,7 @@
     const ibtn = document.getElementById("invBtn");
     client.onUpdate(anyApi.control.invariantState, {}, (st) => {
       invEnabled = !!st.enabled;
-      ibtn.textContent = invEnabled ? "🔗 INVARIANT: ON — click to DISABLE" : "🔗 INVARIANT: OFF (proposed) — click to ENABLE";
+      ibtn.textContent = invEnabled ? "🔗 INVARIANT: ON — click to DISABLE" : "🔗 INVARIANT: OFF — click to ENABLE";
       ibtn.style.background = invEnabled ? "var(--ok)" : "var(--surface-2, #333a44)";
       ibtn.style.color = invEnabled ? "#04121f" : "var(--ink)";
     }, () => {});
