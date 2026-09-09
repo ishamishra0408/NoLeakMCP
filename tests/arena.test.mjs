@@ -393,7 +393,9 @@ test("the site hero is a working form over the arena API with honest button labe
     // one h1, and the Slack recap card quotes the committed screenshot
     assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
     assert.match(html, /slackcard--recap/); assert.match(html, /Standup recap:/);
-    assert.ok(Buffer.byteLength(html, "utf8") < 135 * 1024, "site/index.html under 135 KB as served");
+    // 145 KB is the owner's budget for the page (2026-09-09); it was 135 before the
+    // before-and-after pair and the Slack frame around the screenshot were added.
+    assert.ok(Buffer.byteLength(html, "utf8") < 145 * 1024, "site/index.html under 145 KB as served");
   } finally { await app.close(); }
 });
 

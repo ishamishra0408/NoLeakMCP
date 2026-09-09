@@ -201,22 +201,29 @@ every state also has its word and, on the verdicts, a glyph.
 | `--bar-tint` | `rgba(255,255,255,.72)` | `rgba(20,25,37,.74)` | the bar's Regular tint (the site's detached-nav tint, used at rest on the arena and dashboard) |
 | `--grid-ink`, `--glow-a/b` | light values | dark values | the hero scene (site) and the fixed soft field behind the arena and dashboard |
 | `--shadow-1`, `--shadow-seg`, `--glass-shadow` | ink-tinted | black | elevation |
-| `--slack-*` (19 tokens, site only) | Slack's own **light** theme | Slack's own **dark** theme | the recreated thread and the recap card |
+| `--slack-*` (19 tokens, site only) | Slack's own **light** theme | Slack's own **dark** theme | the Slack window's neutrals: ground, hairlines, text, timestamps, badges, mention text |
+| `--sk-*` (11 tokens, **component-scoped**, declared on `.slackcard` — not in this block) | aubergine rail `#3f0e40` and top bar `#350d36`, active channel `#1164a3`, link `#1264a3`, hover `#f8f8f8`, mention ground `#e8f5fa` | rail, top bar and active channel **unchanged** (Slack keeps the sidebar theme in dark mode); link `#1d9bd1`, hover `#222529`, mention ground `rgba(29,155,209,.10)` | Slack's signature hues, and only inside the Slack window. The one sanctioned exception to rule 1 — see "The Slack window" below |
 
-Measured 2026-09-08 after the revert and the consistency pass, with an in-page script over
-every visible text-bearing element (one pair per element; 116 on the site at 1280 and 106 at
-375, 48 on the arena with a replayed run on screen, 276 on the dashboard), compositing every
-translucent layer over the real backdrop (`alpha·tint + (1−alpha)·backdrop`, down to
-`body`): **0 pairs below 4.5:1** (3:1 for large text) in either theme on any surface. Worst
-three — site light 5.51 / 5.66 / 5.66 (the brass eyebrow on `--bg`; the segmented control's
-labels on the glass bar), site dark 5.86 / 5.86 / 5.99 (the same labels; the toggles' small
-text on `--panel`); arena light 4.82 / 4.94 / 5.46 (inline `code` on `--accent-soft`, twice;
-the dashboard link), arena dark 5.00 / 5.11 / 5.11 (`code`; the transcript's step labels);
-dashboard light 5.51 ×3 (the eyebrows), dashboard dark 5.21 ×3 (green ON-column cells on
-`--panel`). Control borders bottom out at 3.42 light (the skip link on all three, and the
-dashboard's switches) / 3.89 dark (a checked toggle's `--ok-line` border on the arena console);
-the segmented control's selected knob is a state indicator inside that bordered control and is
-not counted as a boundary. Hit targets: 0 under 44×44 on any surface at 1280 or 375.
+Measured 2026-09-09 after the demo-pair and Slack-window pass, in headless Chrome over CDP
+with an in-page script over every visible element that owns a text node (379 pairs on the
+site at 1280 and 361 at 375, 33 on the arena at rest, 276 on the dashboard), compositing every
+translucent layer over the real backdrop (`alpha·tint + (1−alpha)·backdrop`, down to `body`):
+**0 pairs below 4.5:1** (3:1 for large text) in either theme on any surface, at 1280×800 and
+at the 375×812 mobile preset. Worst three — site light 4.94 ×3 (inline `code`, `--accent` on
+`--accent-soft` over `--panel`), site dark 4.70 ×3 (the Slack window's `@mention` chips,
+`#1d9bd1` on the scoped `--sk-mention-bg` over Slack's `#1a1d21`; they measured 4.28 on the
+palette's `.16` ground, which is why the scoped token exists); arena light 4.94 / 5.46 / 5.51
+(`code`; the dashboard link; the eyebrow), arena dark 5.99 / 5.99 / 6.25 (the toggles' small
+text; the console note); dashboard light 5.51 ×3 (the eyebrows and the brass italic), dashboard
+dark 5.21 ×3 (green ON-column cells on `--panel`). Inside the Slack window the worst pairs are
+those chips (dark 4.70, light 5.59); everything on the aubergine rail is ≥ 6.2 (the active
+channel, white on `#1164a3`) and the rail is `aria-hidden`. The avatars are solid fills
+(`--slack-av-a`, `--slack-app-b`) because the previous gradients' light ends fell to 3.8–4.1
+under their initials. Control borders bottom out at 3.42 light (the skip link and the tab
+list) / 4.09 dark (the console's select and toggles); the Slack window's own hairline is a
+container edge, not a control boundary, and is not counted. Hit targets: 0 under 44×44 on any
+surface at 1280 or 375 (22 controls on the site at 1280, 14 at 375; the two native checkboxes
+live inside their 44px `.tog` labels, which are the targets).
 
 Non-colour tokens (type scale, space scale, motion, radius, `--hit:44px`) are theme-independent
 and live only on `:root`.
@@ -358,7 +365,42 @@ Two rules the recreation obeys, and any replacement must too:
 
 The third beat (`.slackcard--recap`) is the victim agent's standup recap, quoted verbatim from
 the same screenshot, with the `APP` badge Slack draws on a bot and the @-mention chips. It is
-always the recreation; there is no separate drop-in for it.
+always the recreation; there is no separate drop-in for it. (Until 2026-09-09 the screenshot
+rule `body[data-slack-shot] .slackcard { display:none }` hid this card too, so with the
+screenshot in place beat 3 was a caption with nothing above it. The rule now hides only beat
+1's recreated pane, `.slackcard--thread .slackcard__pane`; the frame and beat 3 stay.)
+
+### The Slack window (2026-09-09) — the one component allowed to look like another product
+
+The owner asked for the Slack moments to **pop**, so a judge recognises the surface at a
+glance and then sees the guard stop what it tried to do. Both Slack beats, and the frame
+around the real screenshot, are one component, `.slackcard`, drawn as a Slack window:
+
+- **Chrome.** An aubergine top bar (`--sk-top`, `#350d36`) holding Slack's search pill; an
+  aubergine rail (`--sk-rail`, `#3f0e40`) with Slack's generic items — Threads, Mentions &
+  reactions, Drafts & sent, a Channels label and `# eng-channel` as the active item in Slack's
+  blue (`--sk-active`, `#1164a3`). Nothing on the rail is workspace data; both bar and rail
+  are `aria-hidden`, and the rail leaves below 640px. The rail keeps its aubergine in dark,
+  as Slack's sidebar theme does; only the message pane follows the theme.
+- **Pane.** Bold `# eng-channel` header, message rows with Slack's hover wash (`--sk-hover`),
+  bold names, the `2 replies` count in Slack's link blue with a hairline, the drop URL as a
+  Slack link (`--sk-link`, underlined on hover), the `APP` badge and the `@mention` chips.
+  Message text is plain, as Slack renders it, capped at `--measure` because the thread pane
+  in the screenshot is that wide.
+- **Tokens.** Slack's neutrals stay the palette's `--slack-*` tokens. Slack's signature hues
+  are eleven `--sk-*` tokens **declared on `.slackcard` itself**, light on the class and dark
+  in two scoped blocks that mirror §2a/§2b byte for byte
+  (`:root:not([data-theme="light"]) .slackcard` / `:root[data-theme="dark"] .slackcard`).
+  They are the sanctioned exception to "every colour token on bare `:root`": nothing outside
+  the component can reach them, the palette blocks are byte-identical to `9d6bf9e`, and no
+  other component may borrow them. The page's own palette is not restyled to match Slack.
+- **With the screenshot present** the same frame wraps the PNG (`.slackshot` inside
+  `.slackcard__main`), so beat 1 and beat 3 read as the same window whichever way the slot
+  resolves; the caption says the rail and top bar are drawn, not captured.
+- **Then the guard.** Directly under the Slack window, beat 2 opens with the before-and-after
+  pair (below): the same send, Leaked on the left, Denied by the guard on the right, each with
+  its verdict band and its `5/5`; beat 3 closes with the recap that shows nothing happened in
+  the channel. Slack, then denial, then "nothing showed" — in that order, without a click.
 
 The drop-in slot for the first beat:
 
@@ -378,10 +420,38 @@ The drop-in slot for the first beat:
 
 ## Adding the demo footage
 
-The second beat of the attack section ("What the agent did") has **two drop-in slots** for
-screen recordings, placed above the harness-log tabs so the reader sees the real thing happen
-and then reads the log of it. Until the files exist the block is `display:none` and beat 2
-reads exactly as before — nothing on the page looks missing.
+The second beat of the attack section ("What the agent did") opens with a **before-and-after
+pair** — `#demoAttack` (guard off) and `#demoBlocked` (guard on) — above the harness-log tabs,
+so the reader sees the contrast first and reads the full log second.
+
+### How the pair presents (rules, 2026-09-09; reference: cluely.com's demo sections)
+
+The owner named cluely.com as the model — "obvious design and explanation". What was taken from
+it, and is now the rule for any demo on the page:
+
+1. **Each clip is its own full-width beat.** Side by side from 900px (the two halves of one
+   argument), stacked below, with generous space between beats. Never a carousel, never a tab.
+2. **Media in a soft-shadowed rounded box — no device bezel, no fake browser chrome.**
+   `.demo__box`: `--r` corners, a `--line` hairline, `--shadow-1`, fixed **16/10** so a clip
+   dropping in cannot move the page.
+3. **A short, action-focused caption sits directly above the media**, 20–50 characters, written
+   as what happens, not as a label: *The keys leave through one link* · *The same send, denied
+   before it leaves*. A tone tag (`Guard off` / `Guard on`, dot + word) sits above it.
+4. **One bold stat under each box, with its denominator, drawn from `eval/out/results.md` and
+   `README.md` only:** `5/5` runs delivered the decoy with the guard off · `5/5` attempts denied
+   with the guard on — direct arm, both victims. A shared line under the pair carries the
+   headline, `1.00 → 0.00`, N=5 per cell. No number may appear here that is not in those two
+   files.
+5. **The page is complete while the footage is absent.** Each box holds a **still** until a
+   clip exists: the tail of the harness log (the thread read, the scorer flag, `read_file`, the
+   `http_get`, the outcome line) and a **verdict band** — Leaked in `--bad`, Denied by the guard
+   in `--ok`, the existing verdict treatment (serif word, glyph, tone) with a 12% wash and a
+   4px rule so it carries next to the Slack window. There is no grey "video goes here" box and
+   no empty frame. When a clip arrives it replaces the still in the same box and the source
+   line under the caption swaps from "The last lines of the harness log…" to "Screen
+   recording: …".
+6. The pair never replaces the tabs: the full log, one control at a time, follows under the
+   eyebrow "The full harness log, one control at a time".
 
 | Slot | File | Shows |
 |---|---|---|
@@ -405,17 +475,21 @@ How it behaves:
    It writes the filename it found into `<body data-demo-attack="demo-attack.mp4">` /
    `data-demo-blocked="…"` and, when present, `data-demo-attack-poster="demo-attack-poster.png"`.
 2. The page's `demo()` script builds the `<video>` (or the `<img>` for a gif) **only** from
-   those attributes, so a site without the files never requests them and never logs a 404.
-   Each slot has a visible caption under the box that says which state it shows.
+   those attributes, so a site without the files never requests them and never logs a 404. It
+   then sets `data-media` on the slot, which retires the still and swaps the source line under
+   the caption; the tag, the caption and the stat do not change.
 3. With motion allowed, a video autoplays muted and looped, and a click on it pauses or
    resumes; a gif simply plays. If the browser refuses autoplay, a **Play** control appears
    over the box (a `.btn`, 44px). Under `prefers-reduced-motion: reduce` nothing autoplays: a
    video shows its poster (or first frame) with the Play control and native controls; a gif —
-   which cannot be paused — shows its poster and is only fetched once Play is pressed.
-4. One slot alone renders full width (up to 820px); both render side by side from 768px up and
-   stack on phones.
+   which cannot be paused — is only fetched once Play is pressed, and until then the poster,
+   or the still itself, is the frame under the control.
+4. Both slots are always on the page (still or clip). They sit side by side from 900px and
+   stack below; the box is 16/10 at every width and on a phone grows to fit the still
+   (`overflow:clip`, not `hidden`, so the aspect box keeps a content-based minimum height).
 5. On a load error (a static host that sets the attribute but cannot serve the file) the slot
-   removes its own body attribute and disappears, as the screenshot slot does.
+   removes its own body attribute and `data-media`, drops the broken element, and the still
+   returns — the beat never goes blank.
 6. The server serves the files by basename only (no separators survive the allowlist regex),
    with `Accept-Ranges: bytes` and single-range `206` answers — Safari refuses to play a video
    from a server that cannot answer a range request.

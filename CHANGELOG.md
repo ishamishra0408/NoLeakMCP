@@ -116,6 +116,24 @@ Nothing above is submitted as event work.
   `demo-blocked.{mp4|webm|gif}` (+ optional `demo-<slot>-poster.png`), detected server-side like the
   screenshot, served by basename with byte ranges, reduced-motion aware. One arena test added (18).
 
+### 2026-09-09 — the before-and-after pair and the Slack window (site)
+- Beat 2 of the attack section opens with a before-and-after pair: guard off, *The keys leave
+  through one link*, `5/5` runs delivered the decoy; guard on, *The same send, denied before it
+  leaves*, `5/5` attempts denied; `1.00 → 0.00` under both (`eval/out/results.md`, direct arm,
+  both victims, N=5 per cell). Each half is a 16/10 soft-shadowed box that holds the owner's
+  screen recording when `site/assets/demo-<slot>.*` exists and otherwise a still — the tail of
+  the harness log and the verdict band — so the page is complete either way. Presentation
+  rules are in `site/BRAND.md`; the reference was cluely.com's demo sections.
+- Both Slack beats, and the frame around the redacted screenshot, are one component drawn as
+  a Slack window: aubergine top bar and rail, Slack's link blue, hover wash, bold channel name,
+  `APP` badge, `@mention` chips. Slack's hues are eleven `--sk-*` tokens scoped to
+  `.slackcard`; the page palette is byte-identical to `9d6bf9e`.
+- Fixed: with `slack-thread.png` present, the screenshot rule also hid beat 3's recap card,
+  leaving a caption with nothing above it. The rule now hides only beat 1's recreated pane.
+- `site/HIG.md` restamped to the new blob; contrast, hit-target, heading, glass, overflow and
+  keyboard checks re-run on all three surfaces at 1280 and 375 in both schemes. Page-weight
+  cap in `tests/arena.test.mjs` raised 135 → 145 KB (the owner's budget). Tests 21/21.
+
 ## Still owed before submission (tracked, not hidden)
 - Slack-surface `guard/deny` line and Beeceptor leak-vs-dark captures (audit log was reset before
   they were copied out; the new screenshot shows the poison, not a denial).
