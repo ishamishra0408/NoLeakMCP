@@ -25,6 +25,16 @@ Honest scope, in one line: the arena is a **simulated Slack surface and a simula
 agent loop around the real detector functions and a real model** — a harness over the
 same code the `dsh` plugins call, not `dsh` itself. Every credential in it is a decoy.
 
+## Challenges entered, and one deliberately not
+
+| Challenge | Entered | Why |
+|---|---|---|
+| **Applied AI · Nebius** | Yes | Nebius is the victim model *and* the injection scorer. Verify it yourself: `/arena` → guard off → **Run live on Nebius** → LEAKED, then check the attacker-side receipt; guard on → DENIED, receipt empty. Measured across models in [`eval/out/results.md`](eval/out/results.md). |
+| **Multiplayer · Convex** | Yes | Convex holds the shared event stream, the attack-success cells and the guard/invariant control plane (`realtime/convex/`). Runs from `/arena` appear on `/dashboard` in another browser without a refresh. |
+| **Fun Build · NERDCONF** | Yes | Pick a victim, flip the switches, watch it get robbed or saved. |
+| **Workflows · Render** | **No** | Render hosts all three services here, but that challenge requires the **Render Workflows** product and this uses ordinary web and worker services. Hosting is not the required integration, so entering it would be claiming something we did not build. |
+| Deep Research · Linkup, Subscriptions · RevenueCat | No | Not integrated. Bolting either on to qualify would be exactly the "naming a sponsor" the rules exclude. |
+
 > **Tooling requires Node 18+** (dsh, the eval, and the plugins use `fetch`/`AbortController`/logical-assignment; the base system Node may be older — `nvm use 20`). A Node-14 parse error in `eval/run.mjs` cannot be preflighted, so this is called out here.
 
 ---
