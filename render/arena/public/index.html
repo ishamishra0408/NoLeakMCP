@@ -249,6 +249,7 @@ p { margin:0 0 1em; max-width:var(--measure); }
 .step.tool_result::before { border-color:var(--dim); background:var(--dim); }
 .step.detector.deny::before { border-color:var(--ok); background:var(--ok); }
 .step.detector.leak::before { border-color:var(--bad); background:var(--bad); }
+.step.research::before { border-color:var(--line-strong); background:var(--panel2); }
 .step.outcome::before { border-color:var(--ink); background:var(--ink); }
 .step .head { font:600 var(--fs-xs)/1.4 var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--dim); }
 /* transcript lines wrap at the reading measure, like every paragraph */
@@ -450,6 +451,14 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     else if (s.t === "tool_call") { head = "the agent calls a tool"; body = "<code>" + esc(s.tool) + "</code>(" + esc(JSON.stringify(s.args || {})) + ")"; }
     else if (s.t === "tool_result") { head = "the tool answers → " + esc(s.tool); body = "<span class='kv'>" + esc(s.text) + "</span>"; }
     else if (s.t === "detector") { head = s.denied ? ("denied · " + esc(s.detector) + " stopped the call") : "no defence fired"; body = esc(s.text); }
+    else if (s.t === "research") {
+      head = "where the keys were being sent";
+      const srcs = (s.sources || []).map(function (x) { return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.name) + "</a>"; }).join(" · ");
+      body = esc(s.answer || s.text)
+        + '<div class="kv" style="margin-top:6px">' + (s.answer ? "Checked with Linkup" + (s.fresh ? "" : " (cached)") : "")
+        + (srcs ? " · " + srcs : "")
+        + " · the guard blocked the send regardless of what this says.</div>";
+    }
     else if (s.t === "model") { head = "the victim replies (no tool call)"; body = esc(s.text); }
     else if (s.t === "outcome") { head = "outcome"; body = esc(s.text); }
     else body = esc(s.text || "");

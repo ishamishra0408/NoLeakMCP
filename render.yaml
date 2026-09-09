@@ -71,6 +71,10 @@ services:
         value: https://wary-herring-602.convex.cloud   # the same feed the dashboard reads
       - key: NOLEAK_SECRET
         sync: false   # gates the admin reset-limits endpoint
+      - key: LINKUP_API_KEY
+        sync: false   # Deep Research: "where were the keys being sent". A real secret,
+                      # unlike CONVEX_URL above, so it is pasted in the dashboard.
+                      # Absent = the arena runs exactly as before, minus one step.
       - key: COLLECTOR_URL
         fromService:
           type: web

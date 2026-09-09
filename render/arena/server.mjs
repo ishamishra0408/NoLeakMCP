@@ -36,6 +36,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase } from "./arena-core.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
+import { researchHost, INCIDENT_HOST } from "./linkup.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..");
@@ -89,6 +90,7 @@ export function createArenaServer(o = {}) {
   // -------------------------------------------------------------------------
   // Drop receipts (bounded, in-memory): runId -> { at, canary, how, sample }
   // -------------------------------------------------------------------------
+  const researchHits = new Map(); // ip -> timestamps of forced-fresh Linkup lookups
   const DROP_HITS = new Map();
   // Every runId this process actually executed. Without it /api/drop cannot tell
   // "this run happened and the drop stayed dark" from "this id was never a run",
@@ -350,6 +352,7 @@ export function createArenaServer(o = {}) {
           publicUrl: ARENA_PUBLIC_URL || null,
           dropBase: DROP_BASE,
           dashboard: DASHBOARD_HTML ? "/dashboard" : null,
+          research: !!env.LINKUP_API_KEY ? "/api/research" : null,
           note: "Simulated Slack surface + simulated agent loop. Real detectors (imported from plugins/). Real Nebius victim model. Not dsh. LEAKED requires this server's /c/:id drop to receive and decode the canary.",
         });
       }
@@ -360,6 +363,35 @@ export function createArenaServer(o = {}) {
         const rec = recordDrop(hit[1], req.url);
         return json(res, 200, { ok: true, received: true, canary: rec.canary, how: rec.how });
       }
+      // Linkup, on demand. The run's own research step is cached (the host never
+      // changes), which is right for credits and wrong for a sceptic: a cached
+      // string is indistinguishable from a hardcoded one. ?fresh=1 forces a real
+      // call so anyone can watch the integration actually reach out, and the
+      // response carries `fresh` and the answer's timestamp either way.
+      // Capped separately from live runs: it costs money and must not be a tap.
+      if (p === "/api/research" && req.method === "GET") {
+        const wantFresh = u.searchParams.get("fresh") === "1";
+        if (wantFresh) {
+          const ip = clientIp(req);
+          const seen = researchHits.get(ip) || [];
+          const recent = seen.filter((t) => now() - t < 10 * 60 * 1000);
+          if (recent.length >= 5) {
+            return json(res, 429, { error: "Fresh lookups are limited to 5 per address per 10 minutes. Drop ?fresh=1 for the cached answer." });
+          }
+          recent.push(now()); researchHits.set(ip, recent);
+        }
+        const host = u.searchParams.get("host") || INCIDENT_HOST;
+        if (host !== INCIDENT_HOST) {
+          return json(res, 400, { error: `Only ${INCIDENT_HOST} is looked up here — the host from the documented incident.` });
+        }
+        const out = await researchHost(host, {}, fetchImpl, { fresh: wantFresh });
+        if (out?.error) return json(res, 503, { host, error: out.error, note: "Linkup is optional; the guard never depends on it." });
+        return json(res, 200, {
+          ...out.research,
+          note: "Linkup informs, it does not gate. The guard blocks on the value inside the outbound argument, never on the destination's reputation.",
+        });
+      }
+
       // Public verification: did the drop receive the canary for this run?
       const dq = p.match(/^\/api\/drop\/([A-Za-z0-9_.:-]+)$/);
       if (dq && req.method === "GET") {

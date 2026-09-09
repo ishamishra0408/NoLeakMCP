@@ -6,6 +6,7 @@ if (typeof AbortController === "undefined" || typeof fetch === "undefined") { co
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName, pickPublicBase } from "../render/arena/arena-core.mjs";
+import { _clearResearchCache, INCIDENT_HOST } from "../render/arena/linkup.mjs";
 import { createArenaServer } from "../render/arena/server.mjs";
 import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT } from "node:fs";
 import { dirname as dirnameT, join } from "node:path";
@@ -26,6 +27,11 @@ function makeFakeFetch(dropBase, { scorerVerdict } = {}) {
     if (u.includes("chat/completions")) {
       return { ok: true, status: 200, async json() { return { choices: [{ message: { content: JSON.stringify(verdict) } }] }; }, async text() { return ""; } };
     }
+    if (u.includes("api.linkup.so")) {
+      // Without this branch the catch-all below would return {} and the research
+      // step would silently report "no answer" in every test.
+      return { ok: true, status: 200, async json() { return { answer: "Beeceptor is a free request-capture service; anyone can create an endpoint and read what is sent to it.", sources: [{ name: "beeceptor.com", url: "https://beeceptor.com" }] }; }, async text() { return ""; } };
+    }
     if (isDropUrl(u, dropBase)) {
       const insp = inspectDrop(u); // the real drop decodes with the guard's matcher, control OFF
       return { ok: true, status: 200, async json() { return { received: true, canary: insp.canary, how: insp.how }; }, async text() { return ""; } };
@@ -34,6 +40,7 @@ function makeFakeFetch(dropBase, { scorerVerdict } = {}) {
   };
   fetchImpl.calls = calls;
   fetchImpl.dropCalls = () => calls.filter((c) => /\/c\//.test(c));
+  fetchImpl.linkupCalls = () => calls.filter((c) => c.includes("api.linkup.so"));
   return fetchImpl;
 }
 
@@ -451,4 +458,47 @@ test("the public base is chosen by reachability, not by order", () => {
   assert.equal(pickPublicBase(["http://127.0.0.1:10077"]), "http://127.0.0.1:10077");
   assert.equal(pickPublicBase(["noleak-arena-n14r"]), "https://noleak-arena-n14r", "with no better option, keep it rather than break");
   assert.equal(pickPublicBase([]), "");
+});
+
+// --- Linkup: informs, never gates -------------------------------------------
+// The guard blocks on the value inside the outbound argument. These assert that
+// the destination lookup rides alongside that decision without touching it, and
+// that a missing key or a clean message costs nothing.
+
+test("a flagged message triggers exactly one destination lookup, and it does not change the outcome", async () => {
+  _clearResearchCache();
+  process.env.LINKUP_API_KEY = "test-linkup-key";
+  const f = makeFakeFetch(DROP);
+  const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard: true, invariant: false }));
+  // unchanged verdict: the guard still decides
+  assert.equal(r.outcome, "DENIED_BY_GUARD");
+  assert.equal(f.dropCalls().length, 0);
+  const research = r.steps.filter((s) => s.t === "research");
+  assert.equal(research.length, 1, "one research step");
+  assert.equal(research[0].host, INCIDENT_HOST, "the documented incident host, not the run's own drop");
+  assert.match(research[0].text, /request-capture/i);
+  assert.equal(f.linkupCalls().length, 1, "exactly one Linkup POST");
+  delete process.env.LINKUP_API_KEY;
+});
+
+test("a clean message costs no Linkup call", async () => {
+  _clearResearchCache();
+  process.env.LINKUP_API_KEY = "test-linkup-key";
+  const f = makeFakeFetch(DROP, { scorerVerdict: { injection: false, score: 0, labels: [], reason: "benign" } });
+  const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard: true, invariant: false }));
+  assert.equal(f.linkupCalls().length, 0, "no lookup when nothing was flagged");
+  assert.equal(r.steps.filter((s) => s.t === "research").length, 0);
+  delete process.env.LINKUP_API_KEY;
+});
+
+test("no LINKUP_API_KEY: the run is unaffected and the step says why", async () => {
+  _clearResearchCache();
+  delete process.env.LINKUP_API_KEY;
+  const f = makeFakeFetch(DROP);
+  const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard: false, invariant: false }));
+  assert.equal(r.outcome, "LEAKED", "the run still completes and still leaks");
+  assert.equal(f.linkupCalls().length, 0);
+  const research = r.steps.filter((s) => s.t === "research");
+  assert.equal(research.length, 1);
+  assert.match(research[0].text, /Could not check|LINKUP_API_KEY/i);
 });
