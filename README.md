@@ -31,10 +31,43 @@ same code the `dsh` plugins call, not `dsh` itself. Every credential in it is a 
 |---|---|---|
 | **Applied AI · Nebius** | Yes | Nebius is the victim model *and* the injection scorer. Verify it yourself: `/arena` → guard off → **Run live on Nebius** → LEAKED, then check the attacker-side receipt; guard on → DENIED, receipt empty. Measured across models in [`eval/out/results.md`](eval/out/results.md). |
 | **Multiplayer · Convex** | Yes | Convex holds the shared event stream, the attack-success cells and the guard/invariant control plane (`realtime/convex/`). Runs from `/arena` appear on `/dashboard` in another browser without a refresh. |
-| **Deep Research · Linkup** | Yes | The guard blocks on the *value* inside an outbound call and deliberately knows nothing about the destination. Linkup answers the question it cannot: **where were the keys being sent**. When the scorer flags the message, the arena looks up the attacker host from the documented incident and says, in plain words, that it is a free request-capture endpoint anyone can create and read. Verify: run live with the guard off and read the *where the keys were being sent* step, then call [`/api/research?fresh=1`](https://noleak-arena-n14r.onrender.com/api/research?fresh=1) to force an uncached call and see a current timestamp and sources. **It informs, it does not gate** — no outcome, verdict or severity depends on it, and the arena runs unchanged without the key. |
+| **Deep Research · Linkup** | Yes | The guard decides on the **value** inside an outbound call and deliberately knows nothing about the destination — reputation is not a safe basis for letting a credential leave. Linkup answers the question it cannot: **where were the keys being sent**. It **informs, it does not gate**: no outcome, verdict or severity depends on it, and the arena runs identically without the key. Steps to verify are below. |
 | **Fun Build · NERDCONF** | Yes | Pick a victim, flip the switches, watch it get robbed or saved. |
 | **Workflows · Render** | **No** | Render hosts all three services here, but that challenge requires the **Render Workflows** product and this uses ordinary web and worker services. Hosting is not the required integration, so entering it would be claiming something we did not build. |
 | Subscriptions · RevenueCat | No | Not integrated, and it would cost more than it pays: subscriptions mean a paywall, and Shipping (35 points on *every* challenge) requires a build a judge can test with no private login. |
+
+### Verifying the Linkup integration — 30 seconds, free
+
+1. Open **[the arena](https://noleak-arena-n14r.onrender.com/arena)** and press **Replay a recorded run**. No key, no rate limit, no cost.
+2. Watch the transcript play. **After** the outcome, one more line arrives, headed
+   *"where the keys were being sent — looked up just now, not part of this recording"*.
+   It is fetched live at that moment: a recording cannot contain a web lookup, and the label says so.
+3. The line explains, in plain words, what kind of service the attacker's collector was, and carries clickable third-party sources.
+4. To prove the call is live rather than a stored string, open
+   **[`/api/research?fresh=1`](https://noleak-arena-n14r.onrender.com/api/research?fresh=1)** — it forces an uncached call and returns
+   a moving `at` timestamp, `fresh: true`, and the sources. Call it twice and watch the timestamp change.
+   Drop `?fresh=1` for the cached answer; the cache is 6 h, in memory, and lost on redeploy.
+
+**What it actually returned** (deployed, 2026-09-09, sources: Beeceptor's privacy policy, its mock-API page, its RequestBin comparison):
+
+> Beeceptor is a developer tool that creates temporary HTTP endpoints to mock API behaviour. When you send a request to a
+> free endpoint, Beeceptor captures and displays it in its dashboard. **Anyone can claim such an endpoint immediately
+> without any registration or ownership proof required.** The request contents are visible to Beeceptor's administrators
+> and anyone with access to the dashboard.
+
+That is the whole point of the panel: a reader who has never heard of a canary now understands why a credential arriving there is gone.
+
+**What it looks up, and what it does not.** It researches the **service** (`beeceptor.com`), not the attacker's specific endpoint.
+That endpoint is painted out of the screenshot and elided as `<attacker-host>` throughout this repo
+([`evidence/step7-slack/`](evidence/step7-slack/)), and naming it here to make a sentence read better would have the project
+redacting a string in one file and printing it in another. It would also return nothing: a free `*.free.beeceptor.com`
+subdomain has no web presence, which is precisely what makes it useful to an attacker. A test asserts the elided endpoint
+appears in none of the files that ship.
+
+**Where it sits in the code.** `render/arena/linkup.mjs`, deliberately **not** under `plugins/` — that directory holds the three
+detectors that *can block*. The directory layout states the claim that the prose makes. Four tests hold the line: a flagged run
+still ends `DENIED_BY_GUARD` with the drop dark, a clean message costs no lookup, a missing key leaves the run unchanged, and
+the elided endpoint stays elided.
 
 > **Tooling requires Node 18+** (dsh, the eval, and the plugins use `fetch`/`AbortController`/logical-assignment; the base system Node may be older — `nvm use 20`). A Node-14 parse error in `eval/run.mjs` cannot be preflighted, so this is called out here.
 
