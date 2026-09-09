@@ -329,3 +329,51 @@ test("moving the arena to /arena left the API routes in place", async () => {
     assert.equal((await fetch(url + "/api/replay", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status, 200);
   } finally { await app.close(); }
 });
+
+// The hero console (site/index.html) is a plain form over the arena's own API:
+// its no-JS path submits to /arena with model/guard/invariant, its buttons say
+// which one is instant and which one is live, and the theme control stays a
+// three-radio radiogroup after being demoted to icons.
+test("the site hero is a working form over the arena API with honest button labels", async () => {
+  const { app, url } = await boot();
+  try {
+    const html = await (await fetch(url + "/")).text();
+    assert.match(html, /<form class="run glass[^"]*" id="heroRun" action="\/arena" method="get"/, "a real form, submitting to /arena without JavaScript");
+    assert.match(html, /<select class="sel" id="runModel" name="model">/);
+    assert.match(html, /name="guard" value="on"/); assert.match(html, /name="invariant" value="on"/);
+    assert.match(html, /id="runReplay">Replay a recorded run</, "the primary action says it is a replay");
+    assert.match(html, /id="runLive">Run live on Nebius</, "the live action says it is live");
+    assert.match(html, /id="runOut" data-state="idle" role="status" aria-live="polite"/, "the outcome slot is reserved and announced");
+    assert.match(html, /<noscript><p>Running needs JavaScript/, "the page stays honest without JavaScript");
+    assert.match(html, /fetch\("\/api\/config"\)/); assert.match(html, /post\("\/api\/replay"/); assert.match(html, /post\("\/api\/attack"/);
+    // theme control: still a radiogroup of three radios, each with a text name
+    const seg = html.match(/<div class="seg glass-inset" role="radiogroup"[\s\S]*?<\/div>/)[0];
+    assert.equal((seg.match(/role="radio"/g) || []).length, 3);
+    assert.equal((seg.match(/<span class="seg__t">(System|Light|Dark)<\/span>/g) || []).length, 3);
+    // one h1, and the Slack recap card quotes the committed screenshot
+    assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
+    assert.match(html, /slackcard--recap/); assert.match(html, /Standup recap:/);
+    assert.ok(Buffer.byteLength(html, "utf8") < 135 * 1024, "site/index.html under 135 KB as served");
+  } finally { await app.close(); }
+});
+
+// One type system on all three surfaces: the same Google Fonts stylesheet (the
+// only external font origin) and the three family tokens.
+test("arena and dashboard load the site's type system and nothing else external for fonts", async () => {
+  const { app, url } = await boot();
+  try {
+    const fontsHref = 'href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"';
+    for (const path of ["/", "/arena", "/dashboard"]) {
+      const html = await (await fetch(url + path)).text();
+      assert.ok(html.includes(fontsHref), path + " loads the shared font stylesheet");
+      assert.equal((html.match(/fonts\.googleapis\.com\/css2/g) || []).length, 1, path + " loads it once");
+      for (const tok of ['--serif:"Instrument Serif"', '--sans:"IBM Plex Sans"', '--mono:"IBM Plex Mono"']) assert.ok(html.includes(tok), path + " declares " + tok);
+      assert.doesNotMatch(html, /font:[^;]*ui-sans-serif,system-ui/, path + " has no leftover system-font stack on body");
+    }
+    // the arena honours the site form's query string (source check; the handler is client-side)
+    const arena = await (await fetch(url + "/arena")).text();
+    assert.match(arena, /new URLSearchParams\(location\.search\)/);
+    assert.match(arena, /q\.get\("model"\)/); assert.match(arena, /q\.has\("guard"\)/); assert.match(arena, /q\.has\("invariant"\)/);
+  } finally { await app.close(); }
+});
+

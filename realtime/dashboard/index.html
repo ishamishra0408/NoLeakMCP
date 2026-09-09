@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>No-Leak-MCP — live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 <style>
   /* Tokens. Dark is the base; light is the override. --line is decorative,
      --line-strong bounds a CONTROL (>= 3:1 on its own surface), --on-accent is
@@ -22,7 +25,11 @@
     --ok-wash:rgba(46,160,67,.16); --bad-wash:rgba(248,81,73,.14);
     --glass-blur:20px; --glass-blur-thin:12px; --glass-sat:1.8;
     --glass-r:18px; --glass-pad:10px; --glass-r-in:calc(var(--glass-r) - var(--glass-pad));
-    --t-move:280ms; --ease-out:cubic-bezier(0,0,.2,1); }
+    --t-move:280ms; --ease-out:cubic-bezier(0,0,.2,1);
+    /* One type system across the site, the arena and the dashboard (site/BRAND.md). */
+    --serif:"Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
   @media (prefers-color-scheme: light) {
     :root { --bg:#f6f8fa; --panel:#fff; --panel2:#f0f3f6; --ink:#1f2328; --dim:#59636e; --line:#d0d7de;
       --ok:#136b36; --bad:#b3251a; --amber:#7a5200; --accent:#0b5fd0;
@@ -36,7 +43,9 @@
       --ok-wash:rgba(19,107,54,.13); --bad-wash:rgba(179,37,26,.11); }
   }
   * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink);
-    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased; }
+  code { font-family:var(--mono); font-size:.92em; }
+  input, button { font-family:var(--sans); font-size:14px; }
   /* the same soft field the site hero and the arena carry, so the glass has
      something to refract and the three surfaces read as one product */
   body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -74,11 +83,12 @@
      position:relative — .glass and a bare element selector are not equal. */
   header, header.glass { position:sticky; top:0; z-index:20; padding:18px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
     border-left:0; border-right:0; border-top:0; border-bottom:1px solid var(--line); border-radius:0; }
-  h1 { font-size:17px; margin:0; letter-spacing:.2px; } .sub { color:var(--dim); font-size:12px; }
+  h1 { font:400 24px/1.1 var(--serif); margin:0; letter-spacing:-.01em; } .sub { color:var(--dim); font-size:13px; }
+  h1 .sub { font:400 24px/1.1 var(--serif); font-style:italic; }
   .wrap { padding:20px 22px; max-width:1100px; margin:0 auto; }
   .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
   .tile { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
-  .tile .n { font-size:26px; font-weight:700; } .tile .l { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .tile .n { font:400 30px/1 var(--serif); font-variant-numeric:tabular-nums; } .tile .l { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
   h2 { font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--dim); margin:22px 0 10px; }
   table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
@@ -115,6 +125,7 @@
   /* the defense controls float over the page ground, not inside a solid panel —
      a material with a solid surface directly behind it has nothing to refract */
   .ctlrow { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .ctlrow .muted { max-width:54ch; } /* ~73 characters a line in Plex Sans (HIG typography) */
   .ctl:disabled { opacity:.55; }
   code { color:var(--accent); } .muted { color:var(--dim); } a { color:var(--accent); }
   /* ---------------------------------------------------------------------
@@ -150,7 +161,8 @@
   </filter>
 </defs></svg>
 <header class="glass glass--refract">
-  <h1 style="display:flex;align-items:center;gap:9px"><svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke="#c8a96a" stroke-width="1.75"/><path d="M16 9v7.5" stroke="currentColor" stroke-width="1.75"/><path d="M11.75 20h8.5" stroke="currentColor" stroke-width="1.75"/></svg>No-Leak-MCP <span class="sub">live attack-success-rate · guard OFF vs ON</span></h1>
+  <h1 style="display:flex;align-items:center;gap:9px"><svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke="#c8a96a" stroke-width="1.75"/><path d="M16 9v7.5" stroke="currentColor" stroke-width="1.75"/><path d="M11.75 20h8.5" stroke="currentColor" stroke-width="1.75"/></svg>No-Leak-MCP <span class="sub">live</span></h1>
+  <span class="sub">attack-success-rate · guard OFF vs ON</span>
   <span id="conn" class="pill">connecting…</span>
   <a id="arenaLink" class="arenaLink" href="#" target="_blank" rel="noopener" hidden>Try the arena →</a>
 </header>
