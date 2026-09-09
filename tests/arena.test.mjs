@@ -5,7 +5,7 @@ if (typeof AbortController === "undefined" || typeof fetch === "undefined") { co
 // Convex, no collector — CONVEX_URL/COLLECTOR_URL are empty everywhere.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName } from "../render/arena/arena-core.mjs";
+import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName, pickPublicBase } from "../render/arena/arena-core.mjs";
 import { createArenaServer } from "../render/arena/server.mjs";
 import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT } from "node:fs";
 import { dirname as dirnameT, join } from "node:path";
@@ -424,3 +424,19 @@ test("arena and dashboard load the site's type system and nothing else external 
   } finally { await app.close(); }
 });
 
+
+// The drop base must be a host the victim can actually resolve. Render's
+// `fromService.property: host` hands back a bare service name, and on the first
+// deploy that shadowed RENDER_EXTERNAL_URL and made every guard-off run
+// unverifiable, because the drop it pointed at did not exist.
+test("the public base is chosen by reachability, not by order", () => {
+  assert.equal(
+    pickPublicBase(["noleak-arena-n14r", "https://noleak-arena-n14r.onrender.com"]),
+    "https://noleak-arena-n14r.onrender.com",
+    "a dotless service name must lose to a real hostname even when it comes first",
+  );
+  assert.equal(pickPublicBase(["localhost:10077"]), "http://localhost:10077", "localhost stays usable locally");
+  assert.equal(pickPublicBase(["http://127.0.0.1:10077"]), "http://127.0.0.1:10077");
+  assert.equal(pickPublicBase(["noleak-arena-n14r"]), "https://noleak-arena-n14r", "with no better option, keep it rather than break");
+  assert.equal(pickPublicBase([]), "");
+});

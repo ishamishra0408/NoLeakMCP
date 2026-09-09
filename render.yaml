@@ -78,8 +78,9 @@ services:
           type: web
           name: noleak-collector
           envVarKey: INGEST_TOKEN
-      - key: ARENA_PUBLIC_URL
-        fromService:
-          type: web
-          name: noleak-arena
-          property: host   # public hostname; used to build the verifiable drop URL
+      # ARENA_PUBLIC_URL is deliberately NOT set here. Render's `property: host`
+      # returns the bare service name ("noleak-arena-n14r"), not the FQDN, and it
+      # would shadow RENDER_EXTERNAL_URL, which Render sets automatically on every
+      # web service and which IS the full https URL. The drop the victim fetches is
+      # built from this base, so a bare name means the fetch never resolves and a
+      # guard-off run can never be shown to leak. Leaving it unset is the fix.

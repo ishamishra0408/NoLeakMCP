@@ -34,7 +34,7 @@ import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase } from "./arena-core.mjs";
+import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase } from "./arena-core.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -63,8 +63,14 @@ export function createArenaServer(o = {}) {
   COLLECTOR = COLLECTOR.replace(/\/+$/, "");
   const INGEST_TOKEN = env.INGEST_TOKEN || "";
   const NOLEAK_SECRET = env.NOLEAK_SECRET || "";
-  // Render's `host` property is scheme-less; RENDER_EXTERNAL_URL is set automatically on web services.
-  const ARENA_PUBLIC_URL = normalizeBase(env.ARENA_PUBLIC_URL || env.RENDER_EXTERNAL_URL || "");
+  // The public base has to be a REACHABLE host, because the victim fetches the drop
+  // over the open internet and the leak verdict is the drop's receipt. Render's
+  // `fromService.property: host` yields the bare service name ("noleak-arena-n14r"),
+  // not the FQDN, and a first deploy took ARENA_PUBLIC_URL from it and shadowed the
+  // correct RENDER_EXTERNAL_URL: the drop base became https://noleak-arena-n14r,
+  // which does not resolve, so a guard-off run could never be shown to leak. So the
+  // candidates are ranked by whether they can actually be reached, not by order.
+  const ARENA_PUBLIC_URL = pickPublicBase([env.ARENA_PUBLIC_URL, env.RENDER_EXTERNAL_URL]);
   const DATA_DIR = env.DATA_DIR || "";
 
   // The drop base is THIS service: GET /c/:id records the receipt the verdict needs.

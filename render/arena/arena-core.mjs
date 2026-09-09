@@ -178,6 +178,23 @@ export function normalizeBase(u) {
   return s.replace(/\/+$/, "");
 }
 
+/**
+ * Choose a publicly reachable base from candidates, best first by REACHABILITY.
+ * A hostname with no dot ("noleak-arena-n14r") is a private service name, not
+ * something the victim's fetch can resolve, so it loses to any FQDN even when it
+ * came first. localhost and 127.0.0.1 are dotless too and are allowed, because
+ * locally the victim and the drop are the same process.
+ */
+export function pickPublicBase(candidates) {
+  const norm = (candidates || []).map(normalizeBase).filter(Boolean);
+  const reachable = (b) => {
+    let h = "";
+    try { h = new URL(b).hostname; } catch { return false; }
+    return h.includes(".") || h === "localhost";
+  };
+  return norm.find(reachable) || norm[0] || "";
+}
+
 /** Is `url` a request to THIS run's drop base (same origin, /c/<id> path)? */
 export function isDropUrl(url, dropBase) {
   try {
