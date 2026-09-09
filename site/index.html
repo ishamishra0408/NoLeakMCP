@@ -370,7 +370,7 @@ section.alt { background:var(--bg-2); }
   box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-lo);
 }
 
-The two material fallbacks — Reduce Transparency and no-backdrop-filter — are
+/* The two material fallbacks — Reduce Transparency and no-backdrop-filter — are
    NOT here. They live in §19 at the very end of the stylesheet, because a
    fallback has to outrank the component rules that come after this section, and
    source order is the only thing that reliably does that. Same reason §18
@@ -384,7 +384,24 @@ The two material fallbacks — Reduce Transparency and no-backdrop-filter — ar
    -------------------------------------------------------------------------- */
 .site-header { position:sticky; top:0; z-index:50;
   border-bottom:1px solid var(--glass-line); border-left:0; border-right:0; border-top:0; }
-.site-header.is-scrolled { border-bottom-color:var(--line); }
+/* LEGIBILITY OVER AN UNKNOWN BACKDROP. At scroll 0 the bar is Clear and what is
+   behind it is known: the hero, painted in --bg. Once it detaches, arbitrary
+   content passes under it — the Slack screenshot, the terminal cards, the
+   tables — and text contrast is then a function of the backdrop, not of the
+   token. Measured on the composite (alpha*tint + (1-alpha)*backdrop), --dim
+   links over the Slack PNG fall to 2.55:1 in light. So the detached bar earns
+   its contrast back two ways: a heavier tint, and full-strength ink for the
+   links. Worst case recomputed over the darkest content on the page: 9.9:1
+   light, and over white 6.3:1 dark. This is what Apple means by the Regular
+   variant "adjusting luminosity" — here it is explicit because the material is
+   ours, not the system's. */
+.site-header.is-scrolled { border-bottom-color:var(--line);
+  --glass-tint:rgba(255,255,255,.72); }
+.site-header.is-scrolled .nav__link { color:var(--ink); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .site-header.is-scrolled { --glass-tint:rgba(20,25,37,.74); }
+}
+:root[data-theme="dark"] .site-header.is-scrolled { --glass-tint:rgba(20,25,37,.74); }
 .nav { height:var(--nav-h); }
 .nav__in { height:100%; display:flex; align-items:center; gap:var(--s-4); }
 .nav__brand { display:inline-flex; align-items:center; gap:10px; min-height:var(--hit); color:var(--ink); font-weight:600; letter-spacing:.01em; }
