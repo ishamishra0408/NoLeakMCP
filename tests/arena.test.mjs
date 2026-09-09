@@ -215,15 +215,19 @@ test("drop endpoint records a canary receipt; /api/drop/:id verifies it; admin r
   try {
     const b64 = Buffer.from(DECOY_KEYRING, "utf8").toString("base64");
     const runId = "run-verify-1";
-    // Nothing received yet.
-    let v = await (await fetch(`${url}/api/drop/${runId}`)).json();
-    assert.equal(v.received, false);
+    // An id this service never ran is NOT "received: false" — that is the answer
+    // for a real run whose drop stayed dark, and giving it to a stranger's made-up
+    // id made the endpoint useless for the one job it has: letting a sceptic check
+    // a verdict. Unknown ids 404.
+    const unknown = await fetch(`${url}/api/drop/${runId}`);
+    assert.equal(unknown.status, 404, "an id that was never a run is not found");
+    assert.match((await unknown.json()).error, /unknown run/);
     // The attacker "delivers" the canary.
     const hit = await (await fetch(`${url}/c/${runId}?d=${encodeURIComponent(b64)}`)).json();
     assert.equal(hit.received, true);
     assert.equal(hit.canary, true);
     // Now verifiable independently.
-    v = await (await fetch(`${url}/api/drop/${runId}`)).json();
+    const v = await (await fetch(`${url}/api/drop/${runId}`)).json();
     assert.equal(v.received, true);
     assert.equal(v.canary, true);
     // A non-canary ping to a fresh run is received but not a canary.

@@ -90,6 +90,19 @@ export function createArenaServer(o = {}) {
   // Drop receipts (bounded, in-memory): runId -> { at, canary, how, sample }
   // -------------------------------------------------------------------------
   const DROP_HITS = new Map();
+  // Every runId this process actually executed. Without it /api/drop cannot tell
+  // "this run happened and the drop stayed dark" from "this id was never a run",
+  // and it answered the second case with the first case's body — a made-up id got
+  // a confident {received:false}. That is the opposite of what the endpoint is
+  // for: it exists so a sceptic can check a verdict, and an endpoint that answers
+  // for ids it has never seen cannot be used to check anything.
+  const KNOWN_RUNS = new Map(); // runId -> { at, outcome }
+  const KNOWN_MAX = 2000;
+  function rememberRun(id, outcome) {
+    if (!id) return;
+    if (!KNOWN_RUNS.has(id) && KNOWN_RUNS.size >= KNOWN_MAX) KNOWN_RUNS.delete(KNOWN_RUNS.keys().next().value);
+    KNOWN_RUNS.set(id, { at: now(), outcome });
+  }
   const DROP_MAX = 2000;
   function recordDrop(id, rawUrl) {
     const insp = inspectDrop(rawUrl);
@@ -350,8 +363,20 @@ export function createArenaServer(o = {}) {
       // Public verification: did the drop receive the canary for this run?
       const dq = p.match(/^\/api\/drop\/([A-Za-z0-9_.:-]+)$/);
       if (dq && req.method === "GET") {
-        const rec = DROP_HITS.get(dq[1]);
-        return json(res, 200, rec ? { runId: dq[1], received: true, ...rec } : { runId: dq[1], received: false });
+        const id = dq[1];
+        const rec = DROP_HITS.get(id);
+        if (rec) return json(res, 200, { runId: id, received: true, ...rec });
+        const known = KNOWN_RUNS.get(id);
+        if (known) {
+          return json(res, 200, {
+            runId: id, received: false, outcome: known.outcome,
+            note: "This run happened and the attacker drop was never contacted — the call was denied at assembly, or the victim declined.",
+          });
+        }
+        return json(res, 404, {
+          runId: id, error: "unknown run",
+          note: "This id was never a run on this service. Receipts are held in memory, so a run from before the last deploy is gone too; re-run it to get a fresh one.",
+        });
       }
 
       if (p === "/api/replay" && req.method === "POST") {
@@ -383,6 +408,7 @@ export function createArenaServer(o = {}) {
         }
         limiter.persist(ip, { model: modelKey, guard, invariant, outcome: result.outcome, transcriptId: result.transcriptId });
         broadcast(result); // fire-and-forget to the shared planes
+        rememberRun(result.transcriptId, result.outcome);
         const drop = DROP_HITS.get(result.transcriptId) || null;
         return json(res, 200, {
           live: true, model: result.modelLabel, guard, invariant,

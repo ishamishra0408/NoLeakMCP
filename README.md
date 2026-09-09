@@ -17,7 +17,7 @@ Grounded in a real local install: `@deepseek-ai/dsh` **0.1.1-rc.2**.
 
 Start with **Replay a recorded run**: instant, free, and it needs nothing from you.
 **Run live on Nebius** drives a real victim model against the real detectors; it is
-limited to six runs per address per ten minutes. A run is only called a *leak* when
+limited to 15 live runs per address per ten minutes. A run is only called a *leak* when
 the attacker's drop actually receives and decodes the canary, never because the model
 said so, and every run's receipt is checkable at `/api/drop/<runId>`.
 
@@ -204,7 +204,7 @@ source, and does not document MCP/telemetry/session internals):
 | `render/` + `render.yaml` | Durable collector (web + disk) and checkpointed detection worker (background worker). Render hosting, **not** the Render Workflows product. | Sep 5–6 |
 | `render/arena/` | The **public, judge-runnable arena** (`noleak-arena` web service): pick a victim model + toggle guard/invariant, launch the attack against a live Nebius agent, watch the real detectors decide LEAKED / DENIED / declined. Simulated Slack + agent loop, **real detectors imported from `plugins/`**, real Nebius model. Live + instant Replay, rate-limited. Served at `/arena`; the website is at `/`. | Sep 8 |
 | `site/` | The **public website** (landing page). The hero is the product: a victim picker, guard/invariant toggles and Replay / Run-live buttons wired to the arena's own API (`/api/replay`, `/api/attack`, `/api/config`), with the verdict inline; then the attack told in three Slack beats (the message that arrived, what the agent did, the recap that never mentioned it), the three controls, the eval numbers and evidence ledger, honest scope. Two drop-in slots for screen footage of the attack (guard off / guard on) beside the harness log. Provenance lives here and in `CHANGELOG.md`. Static, zero build, served at `/` by the arena service, with `/arena` and `/dashboard` styled as pages of the same product (`site/BRAND.md`, `site/HIG.md`). | Sep 8 |
-| `tests/` | Network-free unit tests: guard 22, scorer 9, invariant 5, arena 18 (fake LLM + fake fetch; the served site, arena and dashboard HTML; the screenshot and demo-footage drop-in slots both ways) (`node --test tests/`, Node 18+). | Sep 5–8 |
+| `tests/` | Network-free unit tests, **22 in total**, all green: the arena's 19 (a fake LLM and fake fetch drive the real detector wiring, plus the rate limiter, the drop receipts and the served site/arena/dashboard HTML), and one suite each for the guard, the scorer and the invariant. `node --test tests/` on Node 18+. No network, no Nebius, no Convex. | Sep 5–9 | Sep 5–8 |
 | `evidence/` | Captured runs, step by step: guard OFF/ON, scorer verdicts (bash + Slack surface), eval outputs, invariant deny, local Render recovery test. Each folder states what it is and is not. | Sep 5–8 |
 | `architecture/` + `checks/` | Structurizr C4 model (`workspace.dsl`, exported `workspace.json`), five ADRs, viewer, and the diagram checks (collisions, contrast, export, trace). | Sep 5–8 |
 | `diagrams/` | Pre-event C4 dynamic views (`component-view.html`, `container-view.html`) and their generators. | **Sep 4 (pre-event)** |
