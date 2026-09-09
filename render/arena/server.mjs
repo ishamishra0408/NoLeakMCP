@@ -76,7 +76,15 @@ export function createArenaServer(o = {}) {
   // The drop base is THIS service: GET /c/:id records the receipt the verdict needs.
   const DROP_BASE = ARENA_PUBLIC_URL || `http://127.0.0.1:${PORT}`;
 
-  const limiter = createRateLimiter({ perIpMax: 6, windowMs: 10 * 60 * 1000, globalDayMax: 200, now, dataDir: DATA_DIR });
+  // The two caps do different jobs, and only one of them guards the bill.
+  // perIpMax stops a single visitor monopolising the arena. It was 6, which is
+  // wrong for the case that matters: a review panel sits behind one office NAT
+  // and shares one address, so five people each running the guard-off/guard-on
+  // pair exhausted it and the sixth was told the limit was reached. 15 lets a
+  // room take turns. globalDayMax is what actually protects the inference
+  // balance, and it is deliberately unchanged: raising the per-IP number does
+  // not raise the ceiling on a day's spend.
+  const limiter = createRateLimiter({ perIpMax: 15, windowMs: 10 * 60 * 1000, globalDayMax: 200, now, dataDir: DATA_DIR });
 
   // -------------------------------------------------------------------------
   // Drop receipts (bounded, in-memory): runId -> { at, canary, how, sample }
