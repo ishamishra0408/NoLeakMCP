@@ -9,6 +9,14 @@
 <meta name="theme-color" content="#f5f6f9" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0b0e14" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="/assets/mark.svg" type="image/svg+xml" />
+<!-- THE NO-JS GUARD, and it runs before the stylesheet for a reason. Every
+     .reveal starts at opacity:0 and is brought back by the IntersectionObserver.
+     That is fine while the script runs and catastrophic when it does not: without
+     this flag a reader whose JavaScript failed, or is blocked, gets the hero and
+     then a blank page. Scoping the hiding rules to .js means the content is
+     visible by default and the animation is the enhancement, which is the way
+     round it should always have been. -->
+<script>document.documentElement.classList.add("js");</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
@@ -619,11 +627,12 @@ section.alt { background:var(--bg-2); }
 /* --------------------------------------------------------------------------
    10. .reveal — HIG motion: brief, purposeful, never blocks reading
    -------------------------------------------------------------------------- */
-.reveal { opacity:0; transform:translateY(14px); transition:opacity var(--t-enter) var(--ease-out), transform var(--t-enter) var(--ease-out); transition-delay:var(--d, 0ms); }
+.js .reveal { opacity:0; transform:translateY(14px); transition:opacity var(--t-enter) var(--ease-out), transform var(--t-enter) var(--ease-out); transition-delay:var(--d, 0ms); }
 .reveal.is-in { opacity:1; transform:none; }
 .reveal[data-split] { opacity:1; transform:none; transition:none; }
 .reveal[data-split] .w { display:inline-block; overflow:hidden; vertical-align:bottom; padding-bottom:.08em; margin-bottom:-.08em; }
-.reveal[data-split] .w > span { display:inline-block; transform:translateY(110%); transition:transform var(--t-enter) var(--ease-out); transition-delay:var(--wd); }
+.js .reveal[data-split] .w > span { display:inline-block; transform:translateY(110%); transition:transform var(--t-enter) var(--ease-out); transition-delay:var(--wd); }
+.reveal[data-split] .w > span { display:inline-block; }
 .reveal[data-split].is-in .w > span { transform:none; }
 
 /* --------------------------------------------------------------------------
@@ -928,8 +937,8 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior:auto; }
   .reveal, .reveal[data-split] .w > span { transition:opacity var(--t-leave) ease; transform:none !important; }
-  .reveal { opacity:0; } .reveal.is-in { opacity:1; }
-  .reveal[data-split] .w > span { opacity:0; } .reveal[data-split].is-in .w > span { opacity:1; }
+  .js .reveal { opacity:0; } .reveal.is-in { opacity:1; }
+  .js .reveal[data-split] .w > span { opacity:0; } .reveal[data-split].is-in .w > span { opacity:1; }
   /* both parallax paths off: the native animation and the JS transform */
   .layers__plane { animation:none !important; transform:none !important; }
   .layers__depth { transform:none !important; }
