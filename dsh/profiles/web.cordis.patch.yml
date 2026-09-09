@@ -28,7 +28,7 @@
         minEncodedRun: 16
         logPath: !!js process.env.HOME + '/.dsh/mcp-guard.log.jsonl'
         # Live ON/OFF from the Convex dashboard (only consulted when MCPGUARD_ENABLED is unset).
-        controlUrl: https://good-firefly-220.convex.site/guard
+        controlUrl: https://wary-herring-602.convex.site/guard
         controlPollMs: 2000
     - id: injection-scorer
       name: ../injection-scorer/index.js
@@ -48,7 +48,7 @@
       config:
         minTokenLen: 10
         logPath: !!js process.env.HOME + '/.dsh/mcp-invariant.log.jsonl'
-        controlUrl: https://good-firefly-220.convex.site/invariant
+        controlUrl: https://wary-herring-602.convex.site/invariant
         controlPollMs: 2000
     - id: mcp-slack
       name: '@deepseek-ai/dsh-mcp-client'

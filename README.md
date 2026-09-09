@@ -7,6 +7,24 @@ product. Plugins, not patches; config rows, not agent-loop edits.
 
 Grounded in a real local install: `@deepseek-ai/dsh` **0.1.1-rc.2**.
 
+## Try it — nothing to install
+
+| | |
+|---|---|
+| **Website** | **https://noleak-arena-n14r.onrender.com** |
+| **Arena** — pick a victim, set the guard, run the attack | https://noleak-arena-n14r.onrender.com/arena |
+| **Live feed** | https://noleak-arena-n14r.onrender.com/dashboard |
+
+Start with **Replay a recorded run**: instant, free, and it needs nothing from you.
+**Run live on Nebius** drives a real victim model against the real detectors; it is
+limited to six runs per address per ten minutes. A run is only called a *leak* when
+the attacker's drop actually receives and decodes the canary, never because the model
+said so, and every run's receipt is checkable at `/api/drop/<runId>`.
+
+Honest scope, in one line: the arena is a **simulated Slack surface and a simulated
+agent loop around the real detector functions and a real model** — a harness over the
+same code the `dsh` plugins call, not `dsh` itself. Every credential in it is a decoy.
+
 > **Tooling requires Node 18+** (dsh, the eval, and the plugins use `fetch`/`AbortController`/logical-assignment; the base system Node may be older — `nvm use 20`). A Node-14 parse error in `eval/run.mjs` cannot be preflighted, so this is called out here.
 
 ---

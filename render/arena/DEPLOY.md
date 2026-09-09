@@ -1,7 +1,7 @@
 # Deploy the Arena — owner runbook
 
 Click-by-click to put the public, judge-runnable arena online. ~10 minutes.
-Prereqs: the repo is on GitHub; you have a Convex deployment (`good-firefly-220`)
+Prereqs: the repo is on GitHub; you have a Convex deployment (`wary-herring-602`)
 and a Nebius (Token Factory) API key.
 
 ## 1. Render — deploy the Blueprint
@@ -17,7 +17,7 @@ and a Nebius (Token Factory) API key.
    host — used to build the verifiable drop URL `…/c/<runId>`).
 4. Set the three `sync:false` secrets on the **`noleak-arena`** service → **Environment**:
    - `NEBIUS_API_KEY` — victim + scorer inference. **Required** for live runs (Replay works without it).
-   - `CONVEX_URL` — `https://good-firefly-220.convex.cloud` (same deployment the dashboard reads).
+   - `CONVEX_URL` — `https://wary-herring-602.convex.cloud` (same deployment the dashboard reads).
    - `NOLEAK_SECRET` — any long random string; gates `POST /api/admin/reset-limits`.
    Save → the service redeploys.
 
