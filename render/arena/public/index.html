@@ -392,6 +392,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
 (function () {
   const $ = (id) => document.getElementById(id);
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let RESEARCH_URL = null; // "/api/research" when LINKUP_API_KEY is set on the deployment, else null
 
   /* Liquid Glass runtime — the same two halves as the site (§4a there). */
   (function initGlass() {
@@ -452,7 +453,9 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     else if (s.t === "tool_result") { head = "the tool answers → " + esc(s.tool); body = "<span class='kv'>" + esc(s.text) + "</span>"; }
     else if (s.t === "detector") { head = s.denied ? ("denied · " + esc(s.detector) + " stopped the call") : "no defence fired"; body = esc(s.text); }
     else if (s.t === "research") {
-      head = "where the keys were being sent";
+      head = s.replayLive
+        ? "where the keys were being sent — looked up just now, not part of this recording"
+        : "where the keys were being sent";
       const srcs = (s.sources || []).map(function (x) { return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.name) + "</a>"; }).join(" · ");
       body = esc(s.answer || s.text)
         + '<div class="kv" style="margin-top:6px">' + (s.answer ? "Checked with Linkup" + (s.fresh ? "" : " (cached)") : "")
@@ -483,8 +486,32 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       tl.lastElementChild.classList.add("flash");
       i++;
       if (i < steps.length) setTimeout(add, delay);
+      else appendLiveResearch();   // only once the recording has finished playing
     }
-    if (delay) add(); else tl.innerHTML = steps.map(fmtStep).join("");
+    // A recording cannot contain a live web lookup, and Replay is the primary
+    // button — so without this most visitors would never see the destination
+    // research at all. It is fetched now and appended, labelled so nothing implies
+    // the recording held it: the judge on the FREE path watches a real call, which
+    // is better evidence than a baked-in one. It must land AFTER the transcript has
+    // finished playing (the replay staggers its steps by 260ms, and the fetch
+    // resolves first), or the annotation interrupts the story it annotates. Live
+    // runs carry their own research step, so this only fills the replay gap, and a
+    // failure leaves the replay complete.
+    function appendLiveResearch() {
+      if (mode !== "replay" || !RESEARCH_URL) return;
+      if (steps.some(function (x) { return x.t === "research"; })) return;
+      fetch(RESEARCH_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+        if (!d || !d.answer) return;
+        tl.insertAdjacentHTML("beforeend", fmtStep({
+          t: "research", host: d.host, answer: d.answer, sources: d.sources || [],
+          fresh: !!d.fresh, replayLive: true, text: d.answer,
+        }));
+        tl.lastElementChild.classList.add("flash");
+      }).catch(function () { /* optional by design */ });
+    }
+
+    if (delay) add();
+    else { tl.innerHTML = steps.map(fmtStep).join(""); appendLiveResearch(); }
     let foot = `${esc(data.model || "")} · guard ${data.guard ? "on" : "off"} · invariant ${data.invariant ? "on" : "off"}` + (data.transcriptId ? ` · <span class="kv">run ${esc(data.transcriptId)}</span>` : "");
     if (mode === "live" && data.verify) {
       const d = data.drop || {};
@@ -509,6 +536,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     $("fixture").innerHTML = fx.length
       ? fx.map(f => `<option value="${esc(f.id)}">${esc(f.label)}</option>`).join("")
       : `<option value="">(no recorded runs)</option>`;
+    RESEARCH_URL = r.research || null;
     if (!fx.length) { $("replay").disabled = true; $("replay").textContent = "No recordings"; }
     if (r.rate && r.rate.perIpUsed) setRate(r.rate);
     // The site's hero console is a plain form whose no-JS path submits here:
