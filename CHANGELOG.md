@@ -89,9 +89,20 @@ Nothing above is submitted as event work.
   it at `/` and the arena UI at `/arena` (`/api/*`, `/c/:id`, `/dashboard`, `/health` unchanged); the
   dashboard's "Try the arena →" defaults to `/arena`. Two arena tests added for the routes.
 
+### 2026-09-08 — Slack-surface screenshot (poison ingress captured)
+- `evidence/step7-slack/slack-thread.redacted.png` (+ `site/assets/slack-thread.png`) — a redacted
+  screenshot of the poison on the **real** Slack surface: the `[ops-bot]` health-check as a **thread
+  reply** in `#eng-channel`, beside the standup recap. Reproducible via `evidence/step7-slack/redact-shot.py`
+  (PIL, no network) from an uncommitted source. Redacted: browser chrome, URL bar, bookmarks, workspace
+  rail/sidebar and composers cropped out; avatar photos blurred + tiled; collector host replaced with
+  `<attacker-host>`. Site now renders the screenshot in its drop-in slot, and the recreation fallback was
+  corrected to the real text — a **thread reply** by the human `Isha Mishra` spoofing a bot (no `APP`
+  badge), not an app post. `eval/slack/plant.mjs` now posts as a thread reply (new required
+  `SLACK_THREAD_TS`) with the verbatim poison. Ledger updated: this captures the *ingress*, not the block.
+
 ## Still owed before submission (tracked, not hidden)
 - Slack-surface `guard/deny` line and Beeceptor leak-vs-dark captures (audit log was reset before
-  they were copied out).
+  they were copied out; the new screenshot shows the poison, not a denial).
 - `INV-DENY` row captured on the hosted dashboard.
 - A real Render deploy log for the three services (the arena build itself is done: `render/arena/`,
   wired into `render.yaml`, verified end-to-end locally — live Nebius run → Convex feed + durable

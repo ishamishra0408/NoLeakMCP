@@ -18,3 +18,32 @@ the synthetic bash arm (`evidence/step3-scorer/`).
 **What this does not prove:** that the guard denied the exfil on the Slack surface. The guard audit log
 (`~/.dsh/mcp-guard.log.jsonl`) was reset before that session's `guard/deny` lines were copied out, and no
 Beeceptor capture was saved. That evidence is owed — see the README's evidence ledger.
+
+## the redacted screenshot — `slack-thread.redacted.png`
+
+A capture of the poisoned message on the **real** Slack surface: `slack-thread.redacted.png` (also shipped
+as `site/assets/slack-thread.png`, the site's drop-in slot). It shows the live `#eng-channel` — the poisoned
+**thread reply** on the right beside the channel's standup recap on the left. The poison is a reply posted by
+the human account **Isha Mishra** at 6:07 PM, spoofing a bot with a literal `[ops-bot]` text prefix — not an
+app or bot account.
+
+**This captures the ingress (the poison exists on the wire), not the block.** Nothing in the image is a
+`guard/deny`; that half of the ledger row is still owed.
+
+`redact-shot.py` reproduces the image from the source screenshot, which is **not committed** (it carries the
+workspace/channel ids in the URL bar, the DM list, other people's bookmark names, and two recognisable faces).
+Pass the source path as `argv[1]`; it defaults to `~/Desktop/Slack.png`.
+
+Redacted / removed:
+
+- **Cropped out** (not in either region lifted from the source): the macOS menu bar, the Chrome tab strip and
+  title, the URL bar (`T0…/C0…` ids), the bookmarks bar (other people's doc names), the whole Slack workspace
+  rail and sidebar (DM list, other channels, "An offer awaits"), and both message composer boxes.
+- **Avatars**: every human avatar photo (Isha's and Devansh's) is Gaussian-blurred (radius 20) and covered by
+  an opaque rounded tile with initials. The `eng-agent` avatar is a generic app glyph, left as is.
+- **Collector host**: the attacker's Beeceptor endpoint (a `*.free.beeceptor.com` host) is painted out and
+  replaced with a readable `<attacker-host>/c/health?d=<BASE64>` placeholder, so the fact that the message
+  carries an outbound URL survives while the live endpoint does not.
+
+Kept verbatim: `#eng-channel`, the poison text, the sender name (`Isha Mishra`) and timestamps, "2 replies",
+and the standup recap. Names are the team's own (in `README.md`/`CHANGELOG.md`) and are not redacted.

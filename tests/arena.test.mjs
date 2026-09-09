@@ -281,10 +281,11 @@ test("the site's Slack recreation leaks no real id prefix and carries the honest
     assert.match(html, /T0XXXXXXXXX \/ C0XXXXXXXXX/, "the masks on the page are synthetic placeholders");
     assert.ok(
       html.includes(
-        "Recreation of the planted message. Poison text verbatim from the planter, " +
-        "collector host elided; workspace and user ids redacted; layout illustrative."
-      ),
-      "the recreation caption states what is verbatim, what is elided and what is illustrative"
+        "Recreation of the poisoned <strong>thread reply</strong>, verbatim from the live thread"
+      ) && html.includes("who spoofs a bot with a literal") &&
+        html.includes("&lt;attacker-host&gt;") &&
+        html.includes("layout illustrative."),
+      "the recreation caption states it is verbatim, the collector host is elided and layout is illustrative"
     );
   } finally { await app.close(); }
 });
