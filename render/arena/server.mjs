@@ -306,7 +306,18 @@ export function createArenaServer(o = {}) {
         return res.end(DASHBOARD_HTML);
       }
       if (p === "/health") {
-        return json(res, 200, { ok: true, live: !!NEBIUS_KEY, convex: !!CONVEX_URL, collector: !!COLLECTOR, drop: DROP_BASE, day: limiter.day, dayCount: limiter.dayCount, fixtures: FIXTURE_LIST.length });
+        // keyLen + keyFp exist because "live: true" only means the variable is
+        // non-empty, which is exactly how a truncated key hides: the service looks
+        // healthy and every run dies on a 401 from the provider. The fingerprint is
+        // the first 8 hex of sha256 over a 200+ char high-entropy secret, so it
+        // identifies the value without revealing it, and can be compared against the
+        // key you meant to deploy. Never log or return the key itself.
+        return json(res, 200, {
+          ok: true, live: !!NEBIUS_KEY, convex: !!CONVEX_URL, collector: !!COLLECTOR, drop: DROP_BASE,
+          keyLen: NEBIUS_KEY.length,
+          keyFp: NEBIUS_KEY ? createHash("sha256").update(NEBIUS_KEY).digest("hex").slice(0, 8) : null,
+          day: limiter.day, dayCount: limiter.dayCount, fixtures: FIXTURE_LIST.length,
+        });
       }
 
       if (p === "/api/config") {
