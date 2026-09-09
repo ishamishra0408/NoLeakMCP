@@ -64,6 +64,79 @@ and live only on `:root`.
 - Motion (HIG: purposeful, brief, reversible): micro 180ms, enter 320ms, leave 200ms, indicator move 280ms — every UI transition inside 150–400ms. Entering uses `--ease-out cubic-bezier(0,0,.2,1)`, leaving `--ease-in cubic-bezier(.4,0,1,1)`, standard `--ease cubic-bezier(.2,.7,.2,1)`. Two documented exceptions: the statistic counter (900ms, content not chrome) and the scroll parallax (no duration — it is bound to scroll progress). A theme change suppresses every transition for that frame. Parallax plane rates 0.04 / 0.06 / 0.10 / 0.18 / 0.28 / 0.40 (far→front). The **scroll** offset is native — `animation-timeline: view(block)` behind `@supports (animation-timeline: view())` — with the JS `translate3d` loop as the fallback only where `CSS.supports('animation-timeline: view()')` is false; the script skips the plane transform entirely on the native path, so the two never fight. The **pointer** depth (4–22px, `(hover:hover) and (pointer:fine)` only) rides a separate `.layers__depth` child in both paths. Every effect is a `transform`/`opacity` change — never layout. `prefers-reduced-motion`: **both** parallax paths (the native scroll timeline and the JS fallback), ticking and stacking are off; reveals become 200ms opacity fades.
 - Layer blending: layered sections end in a 200px gradient to the next ground — no hard cuts.
 
+## Liquid Glass — the material, and where it is allowed
+
+One material, three surfaces. The canonical implementation and its full derivation from
+Apple's documentation live in **`site/index.html` §4a**; the block is copied verbatim into
+`render/arena/public/index.html` and `realtime/dashboard/index.html`, which have to stay
+self-contained single files. Same tokens, same class names, same rules everywhere, so a
+judge moving between the site, the arena and the dashboard sees one product.
+
+**Sources read 2026-09-08** (Apple's human URLs are a JavaScript SPA; the DocC data
+endpoints are what was actually fetched):
+`technologyoverviews/liquid-glass`, `technologyoverviews/adopting-liquid-glass`, and
+HIG `materials` via `developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json`.
+
+**The five rules taken from those pages, and what each one costs us**
+
+| Apple's rule | What this project does |
+|---|---|
+| "Liquid Glass forms a distinct functional layer for controls and navigation elements … that floats above the content layer" | Glass only on: the site nav, the site's secondary buttons, the arena console, the arena outcome banner, the dashboard header, the dashboard's two defense controls. Nothing else. |
+| "Don't use Liquid Glass in the content layer" | `.card`, `.table`, `.stat`, `.verdict`, `.slackcard`, `.tabs__panel`, the arena step timeline and terminal output, the dashboard stat tiles, ASR matrix and event feed are all solid. Grep for `class="glass` — there are 3 on the site, 2 on the arena, 3 on the dashboard. |
+| "avoid overcrowding or layering Liquid Glass elements on top of each other" | Nothing inside a `.glass` element is also `.glass`. Controls that sit **on** the bar use `.glass-inset`: identical optics, zero `backdrop-filter`. There is exactly one `backdrop-filter` between the eye and the page at any point on any surface. The mobile nav dropdown is deliberately opaque for the same reason. |
+| Regular variant: "blurs and adjusts the luminosity of background content to maintain legibility … when components have a significant amount of text" | `.glass` — the default and almost everything. |
+| Clear variant: "highly translucent … for components that float above media backgrounds" | `.glass--clear` — one use only: the site nav while the page is at scroll 0, over the hero's parallax scene. Eight pixels of scroll and it thickens into Regular, which is Apple's own scroll edge effect. |
+
+**Tokens** (colour tokens obey the same two-theme rule as the rest of the palette):
+`--glass-tint` `--glass-tint-thin` `--glass-tint-clear` (material body) ·
+`--glass-edge` `--glass-edge-lo` `--glass-spec` (specular top, shaded bottom, moving sheen) ·
+`--glass-line` `--glass-fill` `--glass-shadow` (hairline, on-glass fill, float) ·
+`--glass-blur` 20 / `--glass-blur-thin` 12 / `--glass-blur-clear` 9, `--glass-sat` 1.8 ·
+`--glass-r` / `--glass-pad` / `--glass-r-in`.
+
+**Classes**: `.glass` `.glass--thin` `.glass--clear` `.glass--refract` `.glass-inset`.
+
+**Concentric radii.** `--glass-r-in: calc(--glass-r - --glass-pad)`. The arena console is
+radius 22 with 14 of padding, so every control inside it — select, toggles, both buttons —
+is radius 8. The dashboard is 18 with 10, so its input and buttons are 8. The site's
+segmented control is a capsule inside a capsule, which is concentric at any padding.
+
+**The refraction (the SVG layer).** `backdrop-filter: blur() saturate()` reflects and dims
+but does not bend, so the bend is an SVG filter — `feTurbulence` at a base frequency wide
+enough that the noise field is larger than the element (so it reads as uneven glass
+thickness, not frost), smoothed by `feGaussianBlur`, into `feDisplacementMap` at scale 9 —
+chained onto the same `backdrop-filter`. The filter lives in **one hidden `<svg>` per page**
+holding nothing but `<defs>`, with one id, `#nlmGlassRefract`, reused by every element that
+opts in. No element carries an inline filter.
+
+It is an **enhancement, never a dependency**. `url()` inside `backdrop-filter` is honoured
+by WebKit and Blink; **Firefox does not honour it**, and `CSS.supports()` only parses, so a
+runtime probe asks the engine what it actually computed for a throwaway node and only then
+sets `data-glass-refract="on"` on `<html>`. The design is finished with blur alone — delete
+the filter and all three surfaces still look right. Only three elements page-wide opt in
+(site nav, arena console, dashboard header), because a displaced backdrop is the most
+expensive thing on any of these pages.
+
+**Motion.** The pointer moves the specular: `--mx`/`--my` are written on the hovered glass
+element only, coalesced into one `requestAnimationFrame`, never bound under Reduce Motion or
+on a coarse pointer. Press collapses the float shadow (200ms in, 180ms back). The nav
+thickens Clear → Regular over 280ms `--ease-out`. No glass element carries `will-change`.
+
+**Accessibility, all three surfaces.**
+- `prefers-reduced-transparency: reduce` → every glass class collapses to an opaque surface
+  built from the existing `--panel` / `--bg` tokens, and the refraction is removed.
+- `prefers-reduced-motion: reduce` → transitions off; the specular is never bound. The
+  Clear → Regular swap still happens, instantly: it is a legibility mechanism, not decoration.
+- `@supports not (backdrop-filter: blur(1px))` → the same opaque surface.
+- No glass element sets a text colour, and every glass **control** keeps `--line-strong` as
+  its border, so the 3:1 control-boundary floor is met by the border, not by the material.
+
+**Apple's dimming layer.** HIG specifies "a dark dimming layer of 35% opacity" behind clear
+glass over bright content. That is written for light foregrounds over bright media; here the
+foreground on clear glass is dark ink over a light ground, so the veil runs the other way —
+`--glass-tint-clear` is 16% white in light and 22% ink in dark. Same mechanism: a fixed
+opacity floor that holds no matter what scrolls underneath.
+
 ## Adding the real Slack screenshot
 
 The attack section shows a **recreation** of the planted message: Slack's own chrome, the
