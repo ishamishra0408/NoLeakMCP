@@ -13,8 +13,13 @@
      the ink that sits on a filled accent button. Values match the arena and the
      site, so the three surfaces mean the same thing by the same hue. */
   :root { color-scheme: light dark; --bg:#0b0e14; --panel:#141925; --panel2:#0f1420; --ink:#e6edf3; --dim:#8b98a9;
-    --ok:#2ea043; --bad:#f85149; --amber:#d29922; --line:#232b3a; --accent:#58a6ff;
-    --line-strong:#6b788c; --on-accent:#04121f;
+    --line:#232b3a; --line-strong:#6b788c; --on-accent:#04121f;
+    /* The cybersecurity colour wheel, same hexes as the site (site/BRAND.md):
+       red the attack (LEAK) · blue the defence (DENY, the controls when on) ·
+       purple the arena · yellow the code (events from the real dsh plugins) ·
+       green the automated checks (eval trials) · orange awareness (scorer verdicts). */
+    --red:#f85149; --blue:#58a6ff; --purple:#b88cff; --yellow:#c8a96a; --green:#3fb950; --orange:#f0883e;
+    --accent:var(--blue); --ok:var(--blue); --bad:var(--red); --amber:var(--orange);
     --glow-a:rgba(88,166,255,.10); --glow-b:rgba(200,169,106,.07);
     /* Liquid Glass — see site/index.html §4a for the full derivation. */
     --glass-tint:rgba(20,25,37,.60); --glass-tint-thin:rgba(20,25,37,.46);
@@ -22,7 +27,7 @@
     --glass-line:rgba(230,237,243,.13); --glass-fill:rgba(230,237,243,.06);
     --glass-spec:rgba(255,255,255,.16);
     --glass-shadow:0 10px 30px rgba(0,0,0,.45);
-    --ok-wash:rgba(46,160,67,.16); --bad-wash:rgba(248,81,73,.14);
+    --ok-wash:rgba(88,166,255,.16); --bad-wash:rgba(248,81,73,.14);
     --glass-blur:20px; --glass-blur-thin:12px; --glass-sat:1.8;
     --glass-r:18px; --glass-pad:10px; --glass-r-in:calc(var(--glass-r) - var(--glass-pad));
     --t-move:280ms; --ease-out:cubic-bezier(0,0,.2,1);
@@ -32,7 +37,7 @@
     --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
   @media (prefers-color-scheme: light) {
     :root { --bg:#f6f8fa; --panel:#fff; --panel2:#f0f3f6; --ink:#1f2328; --dim:#59636e; --line:#d0d7de;
-      --ok:#136b36; --bad:#b3251a; --amber:#7a5200; --accent:#0b5fd0;
+      --red:#b3251a; --blue:#0b5fd0; --purple:#6438b8; --yellow:#7d5f1e; --green:#136b36; --orange:#9a3f00;
       --line-strong:#7b8695; --on-accent:#ffffff;
       --glow-a:rgba(11,95,208,.12); --glow-b:rgba(125,95,30,.11);
       --glass-tint:rgba(255,255,255,.58); --glass-tint-thin:rgba(255,255,255,.44);
@@ -40,7 +45,7 @@
       --glass-line:rgba(16,22,32,.13); --glass-fill:rgba(16,22,32,.05);
       --glass-spec:rgba(255,255,255,.55);
       --glass-shadow:0 10px 30px rgba(16,22,32,.10);
-      --ok-wash:rgba(19,107,54,.13); --bad-wash:rgba(179,37,26,.11); }
+      --ok-wash:rgba(11,95,208,.11); --bad-wash:rgba(179,37,26,.11); }
   }
   * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink);
     font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased; }
@@ -93,12 +98,17 @@
   table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
   th { color:var(--dim); font-weight:600; font-size:12px; } tr:last-child td { border-bottom:none; }
+  /* the wheel on the numbers: red = the attack got through, blue = the defence held */
   .asr { font-weight:700; } .asr.off { color:var(--bad); } .asr.on { color:var(--ok); } .asr.na { color:var(--dim); }
   .feed { max-height:360px; overflow:auto; } .k { display:inline-block; min-width:118px; font-weight:600; }
-  .k.deny { color:var(--bad); } .k.verdict { color:var(--amber); } .k.trial { color:var(--accent); }
+  /* feed keywords: each row carries its word (DENY, LEAK, TRIAL…) so the colour
+     is a second channel, never the only one. DENY is blue — a deny is the
+     defence doing its job, not a failure. */
+  .k.deny { color:var(--ok); } .k.verdict { color:var(--amber); } .k.trial { color:var(--green); }
   .pill { font-size:11px; padding:1px 7px; border-radius:20px; border:1px solid var(--line-strong); color:var(--dim); }
   .src { font-size:10px; padding:0 6px; border-radius:20px; border:1px solid var(--line); color:var(--dim); margin-left:6px; vertical-align:middle; }
-  .src.arena { color:var(--accent); border-color:var(--accent); } .src.dsh { color:var(--amber); border-color:var(--amber); }
+  /* where the event came from: purple = the arena, yellow = the real dsh plugins (the code) */
+  .src.arena { color:var(--purple); border-color:var(--purple); } .src.dsh { color:var(--yellow); border-color:var(--yellow); }
   .k.leak { color:var(--bad); }
   /* 44x44 hit target on the one link in the navigation layer */
   .arenaLink { margin-left:auto; display:inline-flex; align-items:center; min-height:44px; }
@@ -127,7 +137,7 @@
   .ctlrow { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
   .ctlrow .muted { max-width:54ch; } /* ~73 characters a line in Plex Sans (HIG typography) */
   .ctl:disabled { opacity:.55; }
-  code { color:var(--accent); } .muted { color:var(--dim); } a { color:var(--accent); }
+  code { color:var(--ink); } .muted { color:var(--dim); } a { color:var(--accent); }
   /* ---------------------------------------------------------------------
      MATERIAL FALLBACKS — last, so they beat every component rule above.
      `.ctl` sets its own background further down, so a fallback placed with
@@ -162,16 +172,16 @@
 </defs></svg>
 <header class="glass glass--refract">
   <h1 style="display:flex;align-items:center;gap:9px"><svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke="#c8a96a" stroke-width="1.75"/><path d="M16 9v7.5" stroke="currentColor" stroke-width="1.75"/><path d="M11.75 20h8.5" stroke="currentColor" stroke-width="1.75"/></svg>No-Leak-MCP <span class="sub">live</span></h1>
-  <span class="sub">attack-success-rate · guard OFF vs ON</span>
+  <span class="sub">what the defences are doing, as it happens · attack success with the guard off vs on</span>
   <span id="conn" class="pill">connecting…</span>
-  <a id="arenaLink" class="arenaLink" href="#" target="_blank" rel="noopener" hidden>Try the arena →</a>
+  <a id="arenaLink" class="arenaLink" href="#" target="_blank" rel="noopener" hidden>Open the arena</a>
 </header>
 <div class="wrap">
   <div id="guardctl" class="ctlrow">
-    <strong>Defense control</strong>
+    <strong>Defence switches</strong>
     <button id="guardBtn" class="ctl glass" style="min-width:230px">connecting…</button>
     <button id="invBtn" class="ctl glass" style="min-width:260px">connecting…</button>
-    <span class="muted">Flip live in ~2s — no restart. Guard = canary tripwire (built). Invariant = tagless provenance (built) — catches untagged secrets by tracking read→post.</span>
+    <span class="muted">A change takes effect in about two seconds, no restart. Guard: stops the planted decoy secret from being sent. Invariant: stops anything the agent read earlier from being sent, tag or no tag. Both are built.</span>
   </div>
   <div id="setup" class="setup" hidden>
     <div style="margin-bottom:8px">Paste your Convex deployment URL (from <code>npx convex dev</code>, e.g. <code>https://xxxx.convex.cloud</code>):</div>
@@ -182,8 +192,9 @@
 
   <div class="tiles" id="tiles"></div>
 
-  <h2>Attack-success-rate matrix</h2>
-  <table id="matrix"><thead><tr><th>Victim</th><th>Style</th><th>Guard OFF</th><th>Guard ON</th><th>Denied (ON)</th><th>Unevaluable</th></tr></thead><tbody><tr><td colspan="6" class="muted">waiting for data…</td></tr></tbody></table>
+  <h2>Attack success rate — how often the secret reached the attacker</h2>
+  <!-- six columns need ~400px; on a phone the table scrolls inside this box so the page never scrolls sideways -->
+  <div style="overflow-x:auto"><table id="matrix"><thead><tr><th>Victim</th><th>Style</th><th>Guard off</th><th>Guard on</th><th>Denied (on)</th><th>Could not judge</th></tr></thead><tbody><tr><td colspan="6" class="muted">waiting for data…</td></tr></tbody></table></div>
 
   <h2>Live event feed</h2>
   <div class="feed"><table id="feed"><tbody><tr><td class="muted">waiting…</td></tr></tbody></table></div>
@@ -256,7 +267,7 @@
     const gbtn = document.getElementById("guardBtn");
     client.onUpdate(anyApi.control.guardState, {}, (st) => {
       guardEnabled = !!st.enabled;
-      gbtn.textContent = guardEnabled ? "🛡️ GUARD: ON — click to DISABLE" : "⚠️ GUARD: OFF — click to ENABLE";
+      gbtn.textContent = guardEnabled ? "Guard is on — turn it off" : "Guard is off — turn it on";
       // state through classes, so the glass material stays in the stylesheet
       gbtn.classList.toggle("is-on", guardEnabled);
       gbtn.classList.toggle("is-off", !guardEnabled);
@@ -272,7 +283,7 @@
     const ibtn = document.getElementById("invBtn");
     client.onUpdate(anyApi.control.invariantState, {}, (st) => {
       invEnabled = !!st.enabled;
-      ibtn.textContent = invEnabled ? "🔗 INVARIANT: ON — click to DISABLE" : "🔗 INVARIANT: OFF — click to ENABLE";
+      ibtn.textContent = invEnabled ? "Invariant is on — turn it off" : "Invariant is off — turn it on";
       ibtn.classList.toggle("is-on", invEnabled);
       ibtn.classList.toggle("is-off", !invEnabled);
     }, () => {});
@@ -284,8 +295,8 @@
     };
 
     client.onUpdate(anyApi.metrics.summary, {}, (s) => {
-      const t = [["events", s.total], ["guard denials", s.denies], ["scorer verdicts", s.verdicts],
-        ["injections flagged", s.injections], ["eval trials", s.trials], ["delivered (attacks)", s.delivered]];
+      const t = [["events", s.total], ["messages stopped by the guard", s.denies], ["messages scored", s.verdicts],
+        ["flagged as poisoned", s.injections], ["eval runs", s.trials], ["secrets that got through", s.delivered]];
       document.getElementById("tiles").innerHTML = t.map(([l, n]) =>
         `<div class="tile"><div class="n">${n ?? 0}</div><div class="l">${l}</div></div>`).join("");
     }, () => {});
@@ -307,11 +318,11 @@
       const row = (e) => {
         const time = new Date(e.ts).toLocaleTimeString();
         const sp = srcPill(e);
-        if (e.kind === "guard/deny") return `<tr><td><span class="k deny">DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · ${esc(e.how)} <span class="muted">${esc(e.marker)}</span>${sp}</td></tr>`;
-        if (e.kind === "invariant/deny") return `<tr><td><span class="k deny">INV-DENY</span> <span class="muted">${time}</span> ${esc(e.tool)} · provenance · ${esc(e.how)}${sp}</td></tr>`;
-        if (e.kind === "exfil/hit") return `<tr><td><span class="k leak">LEAK</span> <span class="muted">${time}</span> canary reached the drop${e.tool?" · "+esc(e.tool):""}${e.how?" · "+esc(e.how):""}${sp}</td></tr>`;
-        if (e.kind === "scorer/verdict") return `<tr><td><span class="k verdict">${e.injection?"INJECTION":"clean"}</span> <span class="muted">${time}</span> ${esc(e.tool)} · score ${typeof e.score==="number"?e.score.toFixed(2):"?"} <span class="muted">${esc((e.labels||[]).join(", "))}</span>${sp}</td></tr>`;
-        if (e.kind === "trial") return `<tr><td><span class="k trial">TRIAL</span> <span class="muted">${time}</span> ${esc(e.model)} · ${esc(e.style)} · guard ${esc(e.guard)} → ${e.delivered?"delivered":e.unevaluable?"unevaluable":"blocked"}${sp}</td></tr>`;
+        if (e.kind === "guard/deny") return `<tr><td><span class="k deny">DENY</span> <span class="muted">${time}</span> the guard stopped ${esc(e.tool)} · secret found as ${esc(e.how)} <span class="muted">${esc(e.marker)}</span>${sp}</td></tr>`;
+        if (e.kind === "invariant/deny") return `<tr><td><span class="k deny">INV-DENY</span> <span class="muted">${time}</span> the invariant stopped ${esc(e.tool)} · a value read earlier, found as ${esc(e.how)}${sp}</td></tr>`;
+        if (e.kind === "exfil/hit") return `<tr><td><span class="k leak">LEAK</span> <span class="muted">${time}</span> the decoy secret reached the attacker's server${e.tool?" · "+esc(e.tool):""}${e.how?" · "+esc(e.how):""}${sp}</td></tr>`;
+        if (e.kind === "scorer/verdict") return `<tr><td><span class="k verdict">${e.injection?"POISONED":"clean"}</span> <span class="muted">${time}</span> ${esc(e.tool)} · score ${typeof e.score==="number"?e.score.toFixed(2):"?"} <span class="muted">${esc((e.labels||[]).join(", "))}</span>${sp}</td></tr>`;
+        if (e.kind === "trial") return `<tr><td><span class="k trial">TRIAL</span> <span class="muted">${time}</span> ${esc(e.model)} · ${esc(e.style)} · guard ${esc(e.guard)} → ${e.delivered?"secret got through":e.unevaluable?"could not judge":"blocked"}${sp}</td></tr>`;
         if (e.kind && e.kind.indexOf("arena/") === 0) return `<tr><td><span class="k">${esc(e.kind.slice(6).toUpperCase())}</span> <span class="muted">${time}</span> ${esc(e.tool||"")}${sp}</td></tr>`;
         return `<tr><td class="muted">${time} ${esc(e.kind)}${sp}</td></tr>`;
       };
