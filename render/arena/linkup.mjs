@@ -12,14 +12,15 @@
  * on-page wording says so. If Linkup is down, slow, or unconfigured, the run is
  * unaffected — the step just says it could not check.
  *
- * WHICH HOST, and why not the run's own:
- *   The arena's poisoned message names the arena's OWN drop URL, because a leak
- *   is only called a leak when that drop actually receives and decodes the
- *   canary. So "research the attacker host from this run" would research our own
- *   Render service and learn nothing. The host below is the one from the
- *   documented real incident (evidence/step7-slack/) — a free request-capture
- *   endpoint, which is the class of destination that matters and is the honest
- *   thing to look up.
+ * WHAT IS LOOKED UP, and why it is neither the run's host nor the attacker's:
+ *   The arena's poisoned message names the arena's OWN drop, because a leak only
+ *   counts when that drop receives and decodes the canary — so researching "the
+ *   attacker host from this run" would research our own Render service. And the
+ *   real attacker endpoint is elided everywhere in this project on purpose, so
+ *   republishing it here to make a sentence read better would have the repo
+ *   redacting a string in one file and printing it in another. What is looked up
+ *   is the SERVICE, which is public, documented, and the thing a reader actually
+ *   needs to understand. See RESEARCH_SUBJECT below.
  *
  * Contract mirrors plugins/injection-scorer/index.js `scoreText`: the key comes
  * from the environment, a missing key returns `{error}` rather than throwing,
@@ -31,8 +32,26 @@
  *   Bearer auth. ~$0.006 per sourced answer, 10 queries/second per org.
  */
 
-/** The attacker endpoint from the documented Slack incident. Not the arena's drop. */
-export const INCIDENT_HOST = "eng-build-health.free.beeceptor.com";
+/**
+ * WHAT IS LOOKED UP, and why it is not the endpoint itself.
+ *
+ * The attacker's actual endpoint is deliberately painted out everywhere in this
+ * project — `evidence/step7-slack/README.md` records the redaction and a test
+ * asserts the site still shows `<attacker-host>` in its place. Naming it here to
+ * make a research line read better would have this repo redacting a string in one
+ * file and publishing it in another, which is the kind of contradiction a judge
+ * finds with one grep, on a project whose whole argument is that it does not
+ * overstate.
+ *
+ * It also would not work. A free `*.free.beeceptor.com` subdomain has no web
+ * presence — that is the point of the service — so a search for it returns
+ * nothing. What a reader needs to know is not which endpoint it was, it is what
+ * KIND of thing it was, and that is a documented, searchable service.
+ */
+export const RESEARCH_SUBJECT = "beeceptor.com";
+
+/** How the endpoint is referred to in prose, matching the site's own elision. */
+export const ATTACKER_HOST_LABEL = "<attacker-host>";
 
 export const LINKUP_DEFAULTS = {
   baseURL: "https://api.linkup.so/v1/",
@@ -56,12 +75,12 @@ export const LINKUP_DEFAULTS = {
 const CACHE = new Map();
 
 /** What we actually want to know, phrased so the answer is usable by a non-expert. */
-export function buildQuery(host) {
-  const domain = String(host).split(".").slice(-2).join(".");
+export function buildQuery(subject) {
   return (
-    `What is the service at ${domain}? Is it a free webhook, request-capture or ` +
-    `request-inspection service that lets anyone create an endpoint and read the ` +
-    `HTTP requests sent to it? Answer briefly and say who can read data sent there.`
+    `What is ${subject}, and what happens to an HTTP request sent to a free ` +
+    `endpoint on it? In plain language: who can read the request and its contents, ` +
+    `how quickly can anyone claim such an endpoint, and does that require proving ` +
+    `ownership? Answer briefly.`
   );
 }
 

@@ -34,7 +34,7 @@ import { randomBytes } from "node:crypto";
 import { scanArguments } from "../../plugins/mcp-guard/index.js";
 import { harvestTokens, matchOutbound } from "../../plugins/chain-invariant/index.js";
 import { scoreText, isIngestSurface } from "../../plugins/injection-scorer/index.js";
-import { researchHost, INCIDENT_HOST } from "./linkup.mjs";
+import { researchHost, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL } from "./linkup.mjs";
 
 // ---------------------------------------------------------------------------
 // Fixed demo world (canary decoys only — mirrors agent-credentials.env)
@@ -363,18 +363,18 @@ export async function runAttack(o) {
     if (researched) return;
     researched = true;
     pendingScores.push((async () => {
-      const out = await researchHost(INCIDENT_HOST, researchCfg, fetchImpl);
+      const out = await researchHost(RESEARCH_SUBJECT, researchCfg, fetchImpl);
       if (out?.research) {
         const r = out.research;
         step({
           t: "research", host: r.host, answer: r.answer, sources: r.sources,
           fresh: !!r.fresh, at: r.at,
-          text: `Where the keys were being sent — ${r.host}. ${r.answer}`,
+          text: `The address in the poisoned message (${ATTACKER_HOST_LABEL}) is an endpoint on ${r.host}. ${r.answer}`,
         });
       } else {
         step({
-          t: "research", host: INCIDENT_HOST, answer: "", sources: [], fresh: false,
-          text: `Could not check where ${INCIDENT_HOST} leads (${out?.error || "no answer"}). The guard does not depend on this.`,
+          t: "research", host: RESEARCH_SUBJECT, answer: "", sources: [], fresh: false,
+          text: `Could not look up ${RESEARCH_SUBJECT} (${out?.error || "no answer"}). The guard never depended on it.`,
         });
       }
     })());

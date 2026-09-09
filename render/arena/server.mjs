@@ -36,7 +36,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase } from "./arena-core.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
-import { researchHost, INCIDENT_HOST } from "./linkup.mjs";
+import { researchHost, RESEARCH_SUBJECT } from "./linkup.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..");
@@ -380,9 +380,9 @@ export function createArenaServer(o = {}) {
           }
           recent.push(now()); researchHits.set(ip, recent);
         }
-        const host = u.searchParams.get("host") || INCIDENT_HOST;
-        if (host !== INCIDENT_HOST) {
-          return json(res, 400, { error: `Only ${INCIDENT_HOST} is looked up here — the host from the documented incident.` });
+        const host = u.searchParams.get("host") || RESEARCH_SUBJECT;
+        if (host !== RESEARCH_SUBJECT) {
+          return json(res, 400, { error: `Only ${RESEARCH_SUBJECT} is looked up here. The attacker's own endpoint stays elided; what matters is what kind of service it was.` });
         }
         const out = await researchHost(host, {}, fetchImpl, { fresh: wantFresh });
         if (out?.error) return json(res, 503, { host, error: out.error, note: "Linkup is optional; the guard never depends on it." });

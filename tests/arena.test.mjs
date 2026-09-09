@@ -6,7 +6,7 @@ if (typeof AbortController === "undefined" || typeof fetch === "undefined") { co
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName, pickPublicBase } from "../render/arena/arena-core.mjs";
-import { _clearResearchCache, INCIDENT_HOST } from "../render/arena/linkup.mjs";
+import { _clearResearchCache, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL } from "../render/arena/linkup.mjs";
 import { createArenaServer } from "../render/arena/server.mjs";
 import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT } from "node:fs";
 import { dirname as dirnameT, join } from "node:path";
@@ -475,7 +475,8 @@ test("a flagged message triggers exactly one destination lookup, and it does not
   assert.equal(f.dropCalls().length, 0);
   const research = r.steps.filter((s) => s.t === "research");
   assert.equal(research.length, 1, "one research step");
-  assert.equal(research[0].host, INCIDENT_HOST, "the documented incident host, not the run's own drop");
+  assert.equal(research[0].host, RESEARCH_SUBJECT, "the service, not the run's own drop and not the elided endpoint");
+  assert.ok(research[0].text.includes(ATTACKER_HOST_LABEL), "prose uses the same elision the site uses");
   assert.match(research[0].text, /request-capture/i);
   assert.equal(f.linkupCalls().length, 1, "exactly one Linkup POST");
   delete process.env.LINKUP_API_KEY;
@@ -501,4 +502,21 @@ test("no LINKUP_API_KEY: the run is unaffected and the step says why", async () 
   const research = r.steps.filter((s) => s.t === "research");
   assert.equal(research.length, 1);
   assert.match(research[0].text, /Could not check|LINKUP_API_KEY/i);
+});
+
+// The attacker's endpoint is painted out of the screenshot, the site captions and
+// evidence/step7-slack/README.md. A research feature is exactly the kind of change
+// that quietly republishes it to make a sentence read better, so assert it stays
+// gone from everything that ships.
+test("the elided attacker endpoint is never republished", async () => {
+  const { readFileSync: rf } = await import("node:fs");
+  const files = [
+    "render/arena/linkup.mjs", "render/arena/arena-core.mjs",
+    "render/arena/server.mjs", "render/arena/public/index.html", "site/index.html",
+  ];
+  for (const f of files) {
+    const body = rf(join(REPO_ROOT_T, f), "utf8");
+    assert.ok(!/eng-build-health/i.test(body), `${f} must not name the elided endpoint`);
+    assert.ok(!/[a-z0-9-]+\.free\.beeceptor\.com/i.test(body), `${f} must not name any *.free.beeceptor.com endpoint`);
+  }
 });
