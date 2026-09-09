@@ -1,7 +1,10 @@
 # Render Blueprint — No-Leak-MCP durable plane: a web service + a background worker + a persistent disk.
 # NOTE: this is Render *hosting*. It does NOT use the Render Workflows product (the Workflows challenge's required tech).
 # Deploy: push repo to GitHub, then Render → New → Blueprint → pick this repo.
-# Set CONVEX_URL on the worker (from your Convex deployment) in the dashboard.
+# CONVEX_URL is set here, not in the dashboard: it is a public endpoint, not a
+# secret (the dashboard HTML ships it to every visitor), so version-controlling it
+# removes a manual step and a way to get the two services pointing at different
+# deployments. NEBIUS_API_KEY and NOLEAK_SECRET stay sync:false -- those are real.
 services:
   - type: web
     name: noleak-collector
@@ -40,7 +43,7 @@ services:
           name: noleak-collector
           envVarKey: INGEST_TOKEN
       - key: CONVEX_URL
-        sync: false   # paste your Convex deployment URL in the Render dashboard
+        value: https://wary-herring-602.convex.cloud   # production; public endpoint, not a secret
 
   # THE PUBLIC SERVICE. This one alone serves everything a judge opens:
   #   /           the website          /arena      the judge-runnable arena
@@ -65,7 +68,7 @@ services:
       - key: NEBIUS_API_KEY
         sync: false   # victim + scorer inference (paste in the Render dashboard)
       - key: CONVEX_URL
-        sync: false   # shared live feed (same deployment the dashboard reads)
+        value: https://wary-herring-602.convex.cloud   # the same feed the dashboard reads
       - key: NOLEAK_SECRET
         sync: false   # gates the admin reset-limits endpoint
       - key: COLLECTOR_URL
