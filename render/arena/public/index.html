@@ -4,221 +4,300 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>No-Leak-MCP — Arena</title>
+<meta name="description" content="Run the Slack credential-leak attack yourself: pick the victim model, switch the guard on or off, and read the verdict. Real detectors, a real model on Nebius, a simulated Slack." />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f5f6f9" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0b0e14" media="(prefers-color-scheme: dark)" />
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<script>
+/* The site's theme choice (System / Light / Dark, stored under nlm-theme) is
+   honoured here too, before first paint, so moving between the pages never
+   changes appearance. The control itself lives on the site's bar. */
+(function () { try { var t = localStorage.getItem("nlm-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+</script>
 <style>
-  /* ---------------------------------------------------------------------
-     Tokens. Dark is the base; light is the override (this surface was built
-     dark-first). --line is decorative; --line-strong bounds a CONTROL and is
-     held to >= 3:1 against its own surface. --on-accent is the ink that sits
-     ON a filled accent button and flips with the theme.
-     --------------------------------------------------------------------- */
-  :root { color-scheme: light dark;
-    --bg:#0b0e14; --panel:#141925; --panel2:#0f1420; --ink:#e6edf3; --dim:#8b98a9;
-    --line:#232b3a; --line-strong:#6b788c; --on-accent:#04121f;
-    /* The cybersecurity colour wheel, same hexes as the site (site/BRAND.md):
-       red the attack · blue the defence · purple the arena (this surface) ·
-       yellow the code · green the automated checks · orange awareness/limits.
-       The role tokens are aliases onto the wheel. */
-    --red:#f85149; --blue:#58a6ff; --purple:#b88cff; --yellow:#c8a96a; --green:#3fb950; --orange:#f0883e;
-    --accent:var(--blue); --ok:var(--blue); --bad:var(--red); --amber:var(--orange);
-    --ok-wash:rgba(88,166,255,.12); --bad-wash:rgba(248,81,73,.10); --amber-wash:rgba(240,136,62,.12);
-    --dim-wash:rgba(139,152,169,.12); --flash:rgba(184,140,255,.14);
-    --glow-a:rgba(184,140,255,.10); --glow-b:rgba(200,169,106,.07);
-    /* Liquid Glass — see site/index.html §4a for the full derivation. Same
-       tokens, same class names, same rules, on all three surfaces. */
+/* =============================================================================
+   No-Leak-MCP arena — one page of the same product as site/index.html.
+   Same tokens, same type scale, same space scale, same components (.site-header,
+   .eyebrow, .run, .fld, .sel, .tog, .btn, .pill, .verdict, .panel, footer).
+   Colour architecture is the site's: every colour token on bare :root (light),
+   the dark palette declared twice, byte-identical (§2a/§2b). Brand: site/BRAND.md.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --bg:#f5f6f9; --bg-2:#eceff4; --panel:#ffffff; --panel-2:#f4f6fa;
+  --line:#c9d0da; --line-strong:#7b8695;
+  --ink:#101620; --dim:#525d6d; --on-ink:#ffffff; --ink-hover:#2a3546;
+  --accent:#0b5fd0; --ok:#136b36; --bad:#b3251a; --amber:#7a5200; --brass:#7d5f1e;
+  --accent-soft:rgba(11,95,208,.07);
+  --ok-line:rgba(19,107,54,.8); --bad-line:rgba(179,37,26,.8);
+  --amber-line:rgba(122,82,0,.8); --brass-line:rgba(125,95,30,.75);
+  --focus:#7d5f1e;
+  --glow-a:rgba(11,95,208,.12); --glow-b:rgba(125,95,30,.11);
+  --glass-tint:rgba(255,255,255,.58); --glass-tint-thin:rgba(255,255,255,.44);
+  --glass-tint-clear:rgba(255,255,255,.16);
+  --glass-edge:rgba(255,255,255,.85); --glass-edge-lo:rgba(16,22,32,.09);
+  --glass-line:rgba(16,22,32,.13); --glass-fill:rgba(16,22,32,.05);
+  --glass-spec:rgba(255,255,255,.55);
+  --glass-shadow:0 10px 30px rgba(16,22,32,.10);
+  --shadow-1:0 12px 32px rgba(16,22,32,.10);
+  --bar-tint:rgba(255,255,255,.72);
+
+  --serif:"Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --fs-xs:clamp(.75rem, .735rem + .07vw, .8125rem);
+  --fs-sm:clamp(.875rem, .86rem + .08vw, .9375rem);
+  --fs-base:clamp(1rem, .975rem + .13vw, 1.0625rem);
+  --fs-lg:clamp(1.125rem, 1.08rem + .22vw, 1.25rem);
+  --fs-h3:clamp(1.125rem, 1.105rem + .1vw, 1.1875rem);
+  --fs-h2:clamp(1.75rem, 1.25rem + 2.4vw, 2.75rem);
+  --measure:54ch;
+  --s-1:4px; --s-2:8px; --s-3:16px; --s-4:24px; --s-5:32px; --s-6:48px; --s-7:64px; --s-8:96px;
+  --t-micro:180ms; --t-enter:320ms; --t-leave:200ms; --t-move:280ms;
+  --ease:cubic-bezier(.2,.7,.2,1); --ease-out:cubic-bezier(0,0,.2,1); --ease-in:cubic-bezier(.4,0,1,1);
+  --nav-h:64px; --gutter:24px; --r:14px; --r-s:6px; --hit:44px;
+  --glass-blur:20px; --glass-blur-thin:12px; --glass-blur-clear:9px; --glass-sat:1.8;
+  --glass-r:22px; --glass-pad:14px; --glass-r-in:calc(var(--glass-r) - var(--glass-pad));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg:#0b0e14; --bg-2:#0d1119; --panel:#141925; --panel-2:#0f1420;
+    --line:#232b3a; --line-strong:#6b788c;
+    --ink:#e6edf3; --dim:#8b98a9; --on-ink:#0b0e14; --ink-hover:#ffffff;
+    --accent:#58a6ff; --ok:#2ea043; --bad:#f85149; --amber:#d29922; --brass:#c8a96a;
+    --accent-soft:rgba(88,166,255,.10);
+    --ok-line:rgba(46,160,67,.8); --bad-line:rgba(248,81,73,.8);
+    --amber-line:rgba(210,153,34,.8); --brass-line:rgba(200,169,106,.7);
+    --focus:#c8a96a;
+    --glow-a:rgba(88,166,255,.10); --glow-b:rgba(200,169,106,.07);
     --glass-tint:rgba(20,25,37,.60); --glass-tint-thin:rgba(20,25,37,.46);
     --glass-tint-clear:rgba(11,14,20,.22);
     --glass-edge:rgba(255,255,255,.22); --glass-edge-lo:rgba(0,0,0,.40);
     --glass-line:rgba(230,237,243,.13); --glass-fill:rgba(230,237,243,.06);
     --glass-spec:rgba(255,255,255,.16);
     --glass-shadow:0 10px 30px rgba(0,0,0,.45);
-    --glass-blur:20px; --glass-blur-thin:12px; --glass-blur-clear:9px; --glass-sat:1.8;
-    /* concentricity: an inset child's radius is the parent's minus the pad */
-    --glass-r:22px; --glass-pad:14px; --glass-r-in:calc(var(--glass-r) - var(--glass-pad));
-    --t-move:280ms; --ease-out:cubic-bezier(0,0,.2,1);
-    /* One type system across the site, the arena and the dashboard (site/BRAND.md):
-       Instrument Serif for display, IBM Plex Sans for text, IBM Plex Mono for code. */
-    --serif:"Instrument Serif", "Iowan Old Style", Georgia, serif;
-    --sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:400 14px/1.55 var(--sans); -webkit-font-smoothing:antialiased; }
-  code { font-family:var(--mono); font-size:.92em; }
-  /* A soft field behind the content, so the glass console has something to
-     refract and so the arena reads as the same product as the site hero.
-     Content layer, fixed, no repaint on scroll, pointer-transparent. */
-  body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
-    background:radial-gradient(ellipse 42% 46% at 74% 14%, var(--glow-a), transparent 70%),
-               radial-gradient(ellipse 34% 34% at 12% 82%, var(--glow-b), transparent 70%); }
-  header { padding:18px 22px; border-bottom:1px solid var(--line); }
-  h1 { font:400 26px/1.1 var(--serif); margin:0; letter-spacing:-.01em; }
-  /* the arena's own colour is purple: where the red attack meets the blue defence */
-  h1 .h1-sub { font:400 26px/1.1 var(--serif); font-style:italic; color:var(--purple); }
-  /* body copy held to a readable measure (HIG typography: 45–75 characters) */
-  .sub { color:var(--dim); font-size:13px; margin-top:6px; max-width:54ch; }
-  /* an inline link is still a control: block padding on an inline box extends
-     the 44px hit region without moving the line (HIG accessibility) */
-  .sub a { padding-block:14px; }
-  .sub b { color:var(--ink); font-weight:600; }
-  .wrap { padding:20px 22px; max-width:1080px; margin:0 auto; }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
-  /* The console: the one floating glass element on this surface. It sticks so
-     it stays over the transcript as the timeline scrolls beneath it — which is
-     the whole reason the material is here. Concentric radii: --glass-r 22 minus
-     --glass-pad 14 leaves 8, which is exactly the radius of the select, the
-     toggles and the buttons inside it. */
-  .console { border-radius:var(--glass-r); padding:var(--glass-pad); margin-bottom:18px; }
-  @media (min-width: 860px) { .console { position:sticky; top:14px; z-index:5; } }
-  /* The outcome banner. Glass, because it is the verdict floating over the
-     transcript; the transcript itself stays solid and readable. */
-  .banner { border-radius:var(--glass-r); padding:10px var(--glass-pad); margin-bottom:14px;
-    display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; align-items:end; }
-  label.fld { display:block; }
-  .fld .l { color:var(--dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
-  /* Controls sitting ON the console are opaque fills, never a second glass
-     layer, and their border is --line-strong so the 3:1 control boundary is
-     met by the border rather than by the material. Radius 8 = 22 - 14. */
-  select { width:100%; background:var(--panel2); color:var(--ink); border:1px solid var(--line-strong); border-radius:var(--glass-r-in); padding:9px 10px; min-height:44px; font:inherit; }
-  .toggles { display:flex; gap:10px; flex-wrap:wrap; }
-  .tog { flex:1; min-width:150px; background:var(--panel2); border:1px solid var(--line-strong); border-radius:var(--glass-r-in); padding:10px 12px; cursor:pointer; min-height:44px; user-select:none; display:flex; align-items:center; gap:9px; }
-  .tog input { accent-color:var(--accent); width:16px; height:16px; }
-  .tog .name { font-weight:600; } .tog .d { color:var(--dim); font-size:11px; }
-  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; align-items:center; }
-  button { border:0; border-radius:var(--glass-r-in); padding:10px 18px; min-height:44px; font:inherit; font-weight:600; cursor:pointer;
-    transition:transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), background-color 180ms var(--ease-out); }
-  button:disabled { opacity:.5; cursor:not-allowed; }
-  button:active:not(:disabled) { transform:scale(.985); }
-  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  /* The launch button is the prominent one: an opaque accent fill, so the most
-     important control on the page never buys its contrast down for a material.
-     It still carries the specular top edge, so it belongs to the same family. */
-  /* the launch button wears the arena's purple: it is the one action that puts
-     the attack and the defence in the same run */
-  .launch { background:var(--purple); color:var(--on-accent); box-shadow:inset 0 1px 0 var(--glass-edge); }
-  .replay { --glass-border:var(--line-strong); color:var(--ink); }
-  .rate { color:var(--dim); font-size:12px; margin-left:auto; }
-  /* verdict badges: a word AND a colour, never colour alone. Red = the attack
-     got through, blue = the defence held, orange = something to be aware of. */
-  .badge { font-size:13px; font-weight:700; padding:6px 14px; border-radius:20px; border:1px solid var(--line-strong); }
-  .badge.LEAKED { background:var(--bad-wash); color:var(--bad); border-color:var(--bad); }
-  .badge.DENIED_BY_GUARD, .badge.DENIED_BY_INVARIANT { background:var(--ok-wash); color:var(--ok); border-color:var(--ok); }
-  .badge.MODEL_DECLINED, .badge.EXFIL_ATTEMPTED { background:var(--amber-wash); color:var(--amber); border-color:var(--amber); }
-  .badge.ERROR { background:var(--dim-wash); color:var(--dim); }
-  .badge.pending { background:var(--panel2); color:var(--dim); }
-  .badge.LEAKED, .badge.DENIED_BY_GUARD, .badge.DENIED_BY_INVARIANT,
-  .badge.MODEL_DECLINED, .badge.EXFIL_ATTEMPTED { border-width:1px; }
-  .otxt { color:var(--dim); font-size:13px; }
-  .mode { font-size:11px; padding:2px 9px; border-radius:20px; border:1px solid var(--line-strong); color:var(--dim); }
-  .mode.live { color:var(--purple); border-color:var(--purple); }
-  .mode.replay { color:var(--dim); border-color:var(--line-strong); }
-  .timeline { position:relative; }
-  .step { border-left:2px solid var(--line); padding:0 0 14px 18px; position:relative; margin-left:6px; }
-  .step:last-child { border-left-color:transparent; }
-  .step::before { content:""; position:absolute; left:-7px; top:2px; width:12px; height:12px; border-radius:50%; background:var(--panel2); border:2px solid var(--line); }
-  .step.setup::before { border-color:var(--dim); }
-  .step.scorer::before { border-color:var(--amber); }
-  .step.tool_call::before { border-color:var(--ink); }
-  .step.tool_result::before { border-color:var(--dim); background:var(--dim); }
-  .step.detector.deny::before { border-color:var(--ok); background:var(--ok); }
-  .step.detector.leak::before { border-color:var(--bad); background:var(--bad); }
-  .step.outcome::before { border-color:var(--ink); background:var(--ink); }
-  .step .head { font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--dim); }
-  /* transcript lines wrap at a reading measure (~75 characters), like the intro */
-  .step .body { margin-top:3px; white-space:pre-wrap; word-break:break-word; max-width:56ch; }
-  .step .body code { color:var(--ink); font-weight:500; font-size:12.5px; }
-  .step.detector.deny .body { color:var(--ok); }
-  .step.detector.leak .body { color:var(--bad); }
-  .kv { color:var(--dim); font-size:12px; font-family:var(--mono); }
-  .foot { color:var(--dim); font-size:12px; margin-top:8px; }
-  a { color:var(--accent); }
-  .flash { animation:flash .5s ease; }
-  @keyframes flash { from { background:var(--flash); } to { background:transparent; } }
-  :root[data-theme="light"], :root:not([data-theme="dark"]) {}
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) { --bg:#f6f8fa; --panel:#fff; --panel2:#f0f3f6; --ink:#1f2328; --dim:#59636e; --line:#d0d7de;
-      /* the wheel needs a light variant too — the dark hues do not clear 4.5:1
-         on a white panel. These are the site's light values, so the surfaces
-         mean the same thing by the same hue. */
-      --red:#b3251a; --blue:#0b5fd0; --purple:#6438b8; --yellow:#7d5f1e; --green:#136b36; --orange:#9a3f00;
-      --ok-wash:rgba(11,95,208,.10); --bad-wash:rgba(179,37,26,.10); --amber-wash:rgba(154,63,0,.10);
-      --dim-wash:rgba(89,99,110,.10); --flash:rgba(100,56,184,.10);
-      --line-strong:#7b8695; --on-accent:#ffffff;
-      --glow-a:rgba(100,56,184,.10); --glow-b:rgba(125,95,30,.11);
-      --glass-tint:rgba(255,255,255,.58); --glass-tint-thin:rgba(255,255,255,.44);
-      --glass-tint-clear:rgba(255,255,255,.16);
-      --glass-edge:rgba(255,255,255,.85); --glass-edge-lo:rgba(16,22,32,.09);
-      --glass-line:rgba(16,22,32,.13); --glass-fill:rgba(16,22,32,.05);
-      --glass-spec:rgba(255,255,255,.55);
-      --glass-shadow:0 10px 30px rgba(16,22,32,.10); }
+    --shadow-1:0 12px 32px rgba(0,0,0,.5);
+    --bar-tint:rgba(20,25,37,.74);
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:#0b0e14; --bg-2:#0d1119; --panel:#141925; --panel-2:#0f1420;
+  --line:#232b3a; --line-strong:#6b788c;
+  --ink:#e6edf3; --dim:#8b98a9; --on-ink:#0b0e14; --ink-hover:#ffffff;
+  --accent:#58a6ff; --ok:#2ea043; --bad:#f85149; --amber:#d29922; --brass:#c8a96a;
+  --accent-soft:rgba(88,166,255,.10);
+  --ok-line:rgba(46,160,67,.8); --bad-line:rgba(248,81,73,.8);
+  --amber-line:rgba(210,153,34,.8); --brass-line:rgba(200,169,106,.7);
+  --focus:#c8a96a;
+  --glow-a:rgba(88,166,255,.10); --glow-b:rgba(200,169,106,.07);
+  --glass-tint:rgba(20,25,37,.60); --glass-tint-thin:rgba(20,25,37,.46);
+  --glass-tint-clear:rgba(11,14,20,.22);
+  --glass-edge:rgba(255,255,255,.22); --glass-edge-lo:rgba(0,0,0,.40);
+  --glass-line:rgba(230,237,243,.13); --glass-fill:rgba(230,237,243,.06);
+  --glass-spec:rgba(255,255,255,.16);
+  --glass-shadow:0 10px 30px rgba(0,0,0,.45);
+  --shadow-1:0 12px 32px rgba(0,0,0,.5);
+  --bar-tint:rgba(20,25,37,.74);
+}
 
-  /* =====================================================================
-     LIQUID GLASS — the same material as site/index.html §4a, which carries
-     the full derivation from Apple's docs. The short version of the rules
-     this file obeys:
-       · glass is the CONTROL layer only. The console (model picker, defense
-         toggles, launch/replay) and the outcome banner are glass. The step
-         timeline, the tool/terminal output, the footer receipt and the page
-         header are content and stay solid.
-       · never glass on glass. Nothing inside .console or .banner is .glass;
-         the select and the toggles are opaque fills on the material.
-       · Regular variant everywhere here — there is no media background on
-         this surface, so the Clear variant is not used. (Site nav uses it.)
-       · the refraction is an SVG filter chained onto the same backdrop-filter
-         and gated on a runtime probe; the console is the only element on this
-         page that opts in.
-     ===================================================================== */
-  .glass { position:relative;
-    background-color:var(--glass-tint);
-    background-image:radial-gradient(220px circle at var(--mx,50%) var(--my,-10%), var(--glass-spec), transparent 62%);
-    border:1px solid var(--glass-border, var(--glass-line));
-    box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-lo), var(--glass-shadow);
-    backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
-    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
-    transition:background-color var(--t-move) var(--ease-out), box-shadow var(--t-move) var(--ease-out),
-               border-color var(--t-move) var(--ease-out); }
-  .glass--thin { --glass-blur:var(--glass-blur-thin); background-color:var(--glass-tint-thin); }
-  /* .glass-inset — the same hairline and specular edge, deliberately WITHOUT a
-     backdrop-filter. Apple's rule is that Liquid Glass elements are not layered
-     on top of each other, and the Replay button sits inside the glass console.
-     A second backdrop-filter there would be glass on glass; this reads as part
-     of the same pane instead. Mirrors the site's segmented control in the nav. */
-  .glass-inset {
-    background-color:var(--glass-fill);
-    border:1px solid var(--glass-border, var(--glass-line));
-    box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-lo);
-  }
-  :root[data-glass-refract="on"] .glass--refract {
-    backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) url(#nlmGlassRefract);
-    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) url(#nlmGlassRefract); }
-  #nlmGlassSvg { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
-  /* The two material fallbacks live at the END of this stylesheet, not here:
-     a fallback has to outrank the component rules that come after this block,
-     and source order is the only thing that reliably does that. */
-  /* ---------------------------------------------------------------------
-     MATERIAL FALLBACKS — last, so they beat every component rule above.
-     A fallback that loses the cascade is not a fallback. Verified by
-     resolving the cascade for every .glass element with each condition
-     forced active. Mirrors site/index.html §19.
-     --------------------------------------------------------------------- */
-  @media (prefers-reduced-transparency: reduce) {
-    .glass, .glass--thin, .glass-inset, .console.glass, .banner.glass, button.glass {
-      background-color:var(--panel); background-image:none;
-      backdrop-filter:none; -webkit-backdrop-filter:none; }
-    :root[data-glass-refract="on"] .glass--refract { backdrop-filter:none; -webkit-backdrop-filter:none; }
-  }
-  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-    .glass, .glass--thin, .glass-inset, .console.glass, .banner.glass, button.glass { background-color:var(--panel); background-image:none; }
-  }
-  @media (prefers-reduced-motion: reduce) { .glass, button { transition:none !important; } }
+/* ------------------------------------------------------------ base (site §3) */
+*,*::before,*::after { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body { margin:0; background:var(--bg); color:var(--ink); font:400 var(--fs-base)/1.6 var(--sans); -webkit-font-smoothing:antialiased; overflow-x:clip; }
+/* the same soft field the site hero carries, so the glass has something to
+   refract and the page reads as the same ground. Fixed, pointer-transparent. */
+body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(ellipse 42% 46% at 74% 14%, var(--glow-a), transparent 70%),
+             radial-gradient(ellipse 34% 34% at 12% 82%, var(--glow-b), transparent 70%); }
+a { color:var(--accent); text-decoration:none; }
+a:hover { text-decoration:underline; text-underline-offset:3px; }
+code, .mono { font-family:var(--mono); font-size:var(--fs-xs); overflow-wrap:anywhere; }
+code { color:var(--accent); background:var(--accent-soft); padding:.1em .38em; border-radius:4px; }
+h1,h2,h3 { font-weight:400; margin:0; letter-spacing:-.01em; }
+h1 { font:400 var(--fs-h2)/1.1 var(--serif); }
+h1 em { font-style:italic; color:var(--brass); }
+h2 { font:600 var(--fs-h3)/1.35 var(--sans); }
+p { margin:0 0 1em; max-width:var(--measure); }
+.eyebrow { font:600 var(--fs-xs)/1 var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--brass); margin:0 0 var(--s-3); }
+.lede { font-size:var(--fs-lg); line-height:1.55; color:var(--dim); max-width:var(--measure); }
+.lede strong, .dim strong { color:var(--ink); font-weight:500; }
+.dim { color:var(--dim); }
+.small { font-size:var(--fs-sm); }
+.wrap { width:min(1120px, 100% - var(--gutter)*2); margin-inline:auto; }
+.vh { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+:focus-visible { outline:2px solid var(--focus); outline-offset:3px; border-radius:2px; }
+.skip { position:absolute; left:-9999px; top:8px; z-index:100; display:inline-flex; align-items:center;
+  min-height:var(--hit); padding:0 16px; background:var(--panel); color:var(--ink);
+  border:1px solid var(--line-strong); border-radius:var(--r-s); font-weight:600; }
+.skip:focus { left:8px; text-decoration:none; }
+
+/* ------------------------------------------------- Liquid Glass (site §4a) */
+.glass { position:relative;
+  background-color:var(--glass-tint);
+  background-image:radial-gradient(220px circle at var(--mx, 50%) var(--my, -10%), var(--glass-spec), transparent 62%);
+  border:1px solid var(--glass-border, var(--glass-line));
+  box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-lo), var(--glass-shadow);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  transition:background-color var(--t-move) var(--ease-out), box-shadow var(--t-move) var(--ease-out), border-color var(--t-move) var(--ease-out); }
+.glass--thin { --glass-blur:var(--glass-blur-thin); background-color:var(--glass-tint-thin); }
+:root[data-glass-refract="on"] .glass--refract {
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) url(#nlmGlassRefract);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) url(#nlmGlassRefract); }
+#nlmGlassSvg { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
+.glass-inset { background-color:var(--glass-fill); border:1px solid var(--glass-border, var(--glass-line));
+  box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-lo); }
+
+/* ------------------------------------------------------- the bar (site §4) */
+/* The one refracting element on this page, as the nav is on the site. Regular
+   variant from the start: there is no hero scene under it here, so it carries
+   the site's detached (scrolled) tint at all times. */
+.site-header { position:sticky; top:0; z-index:50; --glass-tint:var(--bar-tint);
+  border-bottom:1px solid var(--line); border-left:0; border-right:0; border-top:0; border-radius:0; }
+.nav { height:var(--nav-h); }
+.nav__in { height:100%; display:flex; align-items:center; gap:var(--s-4); }
+.nav__brand { display:inline-flex; align-items:center; gap:10px; min-height:var(--hit); color:var(--ink); font-weight:600; letter-spacing:.01em; }
+.nav__brand:hover { text-decoration:none; }
+.mark { width:26px; height:26px; flex:none; }
+.mark .m-o { stroke:var(--brass); } .mark .m-i { stroke:var(--ink); }
+.nav__links { display:flex; align-items:center; gap:var(--s-1); margin-left:auto; list-style:none; padding:0; margin-block:0; }
+.nav__link { display:inline-flex; align-items:center; min-height:var(--hit); padding:0 12px; border-radius:var(--r-s);
+  color:var(--ink); font-size:var(--fs-sm); font-weight:500; position:relative; transition:color var(--t-micro) var(--ease-out), background var(--t-micro) var(--ease-out); }
+.nav__link:hover { text-decoration:none; background:var(--accent-soft); }
+.nav__link.is-active::after { content:""; position:absolute; left:12px; right:12px; bottom:8px; height:1px; background:var(--brass); }
+
+/* ---------------------------------------------------------- page header */
+.page-head { padding:var(--s-6) 0 var(--s-5); }
+.page-head h1 { max-width:22ch; margin-bottom:var(--s-4); }
+.page-head .scope { font-size:var(--fs-sm); color:var(--dim); max-width:var(--measure); margin:0; }
+.page-head .scope strong { color:var(--ink); font-weight:500; }
+.page-head .scope a { padding-block:13px; }
+
+/* ------------------------------------------- .run — the console (site §9) */
+.run { border-radius:var(--glass-r); padding:var(--glass-pad); margin:0 0 var(--s-4); }
+/* the console sticks under the bar so a judge can re-run without scrolling
+   back past a long transcript — the reason a floating material is here */
+@media (min-width: 860px) and (min-height: 700px) { .run { position:sticky; top:calc(var(--nav-h) + 12px); z-index:5; } }
+.run__head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:4px 6px 12px; flex-wrap:wrap; }
+.run__k { margin:0; }
+.run__note { font-size:var(--fs-xs); color:var(--dim); margin:0; }
+.run__grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+@media (min-width: 720px) { .run__grid { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); } }
+.fld { display:block; min-width:0; }
+.fld__l { display:block; font:600 var(--fs-xs)/1 var(--sans); letter-spacing:.06em; text-transform:uppercase; color:var(--dim); margin-bottom:8px; }
+.selw { position:relative; display:block; }
+.selw::after { content:""; position:absolute; right:15px; top:50%; width:7px; height:7px; border-right:1.6px solid var(--dim); border-bottom:1.6px solid var(--dim); transform:translateY(-70%) rotate(45deg); pointer-events:none; }
+.sel { width:100%; min-height:var(--hit); padding:0 36px 0 12px; border-radius:var(--glass-r-in); border:1px solid var(--line-strong);
+  background:var(--panel); color:var(--ink); font:500 var(--fs-sm) var(--sans); appearance:none; -webkit-appearance:none; cursor:pointer; }
+.togs { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
+.tog { display:flex; align-items:center; gap:10px; min-height:var(--hit); padding:0 12px; border-radius:var(--glass-r-in);
+  border:1px solid var(--line-strong); background:var(--panel); cursor:pointer; user-select:none; min-width:0; }
+.tog input { accent-color:var(--ok); width:16px; height:16px; margin:0; flex:none; }
+.tog span { font:600 var(--fs-sm)/1.2 var(--sans); color:var(--ink); }
+.tog small { display:block; font:400 var(--fs-xs)/1.2 var(--sans); color:var(--dim); margin-top:2px; }
+.tog:has(input:checked) { border-color:var(--ok-line); }
+.run__acts { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; align-items:end; margin-top:14px; }
+@media (min-width: 720px) { .run__acts { grid-template-columns:minmax(0,1fr) auto auto; } }
+.run__cost { font-size:var(--fs-xs); color:var(--dim); margin:10px 0 0; grid-column:1 / -1; min-height:1.6em; }
+
+/* -------------------------------------------------- .btn / .pill (site §6) */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:var(--hit); padding:0 20px;
+  border-radius:var(--glass-r-in); font:600 var(--fs-sm) var(--sans); cursor:pointer; --glass-border:var(--line-strong);
+  border:1px solid var(--line-strong); color:var(--ink); background:var(--panel);
+  transition:transform var(--t-micro) var(--ease-out), border-color var(--t-micro) var(--ease-out), background-color var(--t-micro) var(--ease-out), box-shadow var(--t-micro) var(--ease-out); }
+.btn:hover { text-decoration:none; transform:translateY(-1px); border-color:var(--dim); }
+.btn:active { transform:translateY(0) scale(.985); transition-duration:var(--t-leave); transition-timing-function:var(--ease-in); }
+.btn--primary { background:var(--ink); color:var(--on-ink); border-color:var(--ink); box-shadow:inset 0 1px 0 var(--glass-edge), var(--glass-shadow); }
+.btn--primary:hover { background:var(--ink-hover); border-color:var(--ink-hover); }
+.btn[disabled] { opacity:.5; cursor:not-allowed; transform:none; pointer-events:none; }
+.pill { display:inline-flex; align-items:center; gap:6px; font:500 var(--fs-xs)/1 var(--sans); letter-spacing:.04em;
+  padding:7px 10px; border-radius:999px; border:1px solid var(--line-strong); color:var(--dim); white-space:nowrap; }
+.pill--ok { color:var(--ok); border-color:var(--ok-line); }
+.pill--amber { color:var(--amber); border-color:var(--amber-line); }
+
+/* -------------------------------------------- the verdict (site .verdict) */
+.verdict { padding:24px 28px; border-radius:var(--r); border:1px solid var(--line); background:var(--panel); margin:0 0 var(--s-3);
+  display:grid; gap:6px; }
+.verdict__v { display:flex; align-items:center; gap:10px; font:400 clamp(1.5rem, 2.4vw, 1.9rem)/1.1 var(--serif); color:var(--ink); }
+.verdict__v svg { width:24px; height:24px; flex:none; }
+.verdict[data-tone="bad"] { border-color:var(--bad-line); } .verdict[data-tone="bad"] .verdict__v { color:var(--bad); }
+.verdict[data-tone="ok"] { border-color:var(--ok-line); } .verdict[data-tone="ok"] .verdict__v { color:var(--ok); }
+.verdict[data-tone="amber"] { border-color:var(--amber-line); } .verdict[data-tone="amber"] .verdict__v { color:var(--amber); }
+.verdict__fact { color:var(--ink); font-weight:500; font-size:var(--fs-sm); margin:0; max-width:none; }
+.verdict__meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:var(--fs-xs); color:var(--dim); margin:4px 0 0; max-width:none; }
+/* the receipt link is a control: block padding makes it a 44px target in place */
+.verdict__meta a { white-space:nowrap; padding-block:14px; }
+.spin { width:14px; height:14px; border-radius:50%; border:2px solid var(--line-strong); border-top-color:var(--accent); animation:spin 900ms linear infinite; flex:none; display:inline-block; vertical-align:-2px; margin-right:8px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* --------------------------------------------- the transcript (site .card) */
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:24px 28px; margin:0 0 var(--s-6); }
+.panel .eyebrow { margin-bottom:var(--s-4); }
+.timeline { position:relative; }
+.step { border-left:2px solid var(--line); padding:0 0 16px 18px; position:relative; margin-left:6px; }
+.step:last-child { border-left-color:transparent; padding-bottom:0; }
+.step::before { content:""; position:absolute; left:-7px; top:4px; width:12px; height:12px; border-radius:50%; background:var(--panel-2); border:2px solid var(--line); }
+.step.setup::before { border-color:var(--dim); }
+.step.scorer::before { border-color:var(--amber); }
+.step.tool_call::before { border-color:var(--accent); }
+.step.tool_result::before { border-color:var(--dim); background:var(--dim); }
+.step.detector.deny::before { border-color:var(--ok); background:var(--ok); }
+.step.detector.leak::before { border-color:var(--bad); background:var(--bad); }
+.step.outcome::before { border-color:var(--ink); background:var(--ink); }
+.step .head { font:600 var(--fs-xs)/1.4 var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--dim); }
+/* transcript lines wrap at the reading measure, like every paragraph */
+.step .body { margin-top:3px; white-space:pre-wrap; word-break:break-word; max-width:var(--measure); font-size:var(--fs-sm); }
+.step.detector.deny .body { color:var(--ok); }
+.step.detector.leak .body { color:var(--bad); }
+.kv { color:var(--dim); font-size:var(--fs-xs); font-family:var(--mono); }
+.flash { animation:flash .5s ease; }
+@keyframes flash { from { background:var(--accent-soft); } to { background:transparent; } }
+
+/* ------------------------------------------------------------ footer */
+footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font-size:var(--fs-sm); color:var(--dim); }
+.foot { display:flex; gap:var(--s-4); flex-wrap:wrap; align-items:center; }
+.foot a { color:var(--dim); display:inline-flex; align-items:center; justify-content:center; min-height:var(--hit); min-width:var(--hit); }
+.foot a:hover { color:var(--ink); }
+.foot .nav__brand { font-size:var(--fs-sm); }
+.foot .r { margin-left:auto; max-width:var(--measure); }
+
+/* ---------------------------------------------------------- responsive */
+@media (max-width: 767px) {
+  :root { --nav-h:56px; --gutter:16px; }
+  .nav__in { gap:var(--s-2); } .nav__links { gap:0; } .nav__link { padding:0 8px; min-width:var(--hit); justify-content:center; }
+  .lede { font-size:1.05rem; }
+  .run { --glass-pad:10px; }
+  .verdict, .panel { padding:18px 16px; }
+  .foot .r { margin-left:0; }
+}
+
+/* --------------------------------------- reduced motion, then the fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation:none !important; border-top-color:var(--line-strong); }
+  .flash { animation:none; }
+  .btn { transition:opacity var(--t-leave) ease; } .btn:hover, .btn:active { transform:none; }
+  .glass, .site-header.glass { transition:none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass--thin, .glass-inset { background-color:var(--panel); background-image:none;
+    backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:var(--shadow-1); }
+  :root[data-glass-refract="on"] .glass--refract { backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .site-header.glass { background-color:var(--bg); box-shadow:none; }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .glass, .glass--thin { background-color:var(--panel); background-image:none; }
+  .site-header.glass { background-color:var(--bg); }
+}
 </style>
 </head>
 <body>
-<!-- One hidden <svg>, defs only, one filter id reused by every .glass--refract
-     element on this page. Identical to the site's. See site/index.html §4a. -->
+<a class="skip" href="#main">Skip to main content</a>
 <svg id="nlmGlassSvg" aria-hidden="true" focusable="false"><defs>
   <filter id="nlmGlassRefract" x="-6%" y="-30%" width="112%" height="160%" color-interpolation-filters="sRGB">
     <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="11" result="n" />
@@ -226,69 +305,94 @@
     <feDisplacementMap in="SourceGraphic" in2="ns" scale="9" xChannelSelector="R" yChannelSelector="G" />
   </filter>
 </defs></svg>
-<header>
-  <h1 style="display:flex;align-items:center;gap:10px"><svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke="#c8a96a" stroke-width="1.75"/><path d="M16 9v7.5" stroke="currentColor" stroke-width="1.75"/><path d="M11.75 20h8.5" stroke="currentColor" stroke-width="1.75"/></svg><a href="/" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;min-height:44px">No-Leak-MCP</a><span class="h1-sub">Arena</span></h1>
-  <div class="sub">
-    Where the attack meets the defence. Pick the AI model that plays the victim, switch the
-    defences on or off, and run the attack: a poisoned Slack message that tells the assistant
-    to send its keys to the attacker.
-    <b>Honest scope:</b> the Slack workspace and the assistant's loop are simulated here; the
-    <b>detectors are the real code</b> (imported straight from <code>plugins/</code>) and the
-    <b>victim is a real model on Nebius</b>. This is a test bench over the same functions the
-    dsh plugins call — <b>not dsh itself</b>. Every secret is a planted decoy (a canary); nothing
-    real is at risk. Events stream to the shared
-    <a id="dashLink" href="/dashboard" target="_blank" rel="noopener">live dashboard</a>.
-    A leak counts only when the attacker's server actually receives and decodes the decoy — never on the model's say-so.
-  </div>
+
+<header class="site-header glass glass--refract">
+  <nav class="nav" aria-label="Primary">
+    <div class="wrap nav__in">
+      <a class="nav__brand" href="/">
+        <svg class="mark" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="m-o" d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke-width="1.75"/><path class="m-i" d="M16 9v7.5" stroke-width="1.75"/><path class="m-i" d="M11.75 20h8.5" stroke-width="1.75"/></svg>
+        No-Leak-MCP
+      </a>
+      <ul class="nav__links">
+        <li><a class="nav__link" href="/">Site</a></li>
+        <li><a class="nav__link is-active" href="/arena" aria-current="page">Arena</a></li>
+        <li><a class="nav__link" id="dashLink" href="/dashboard">Dashboard</a></li>
+      </ul>
+    </div>
+  </nav>
 </header>
+
+<main id="main">
 <div class="wrap">
-  <div class="console glass glass--refract">
-    <div class="controls">
-      <label class="fld">
-        <div class="l">Victim model (a real model on Nebius)</div>
-        <select id="model"></select>
-      </label>
-      <div class="fld">
-        <div class="l">Defences</div>
-        <div class="toggles">
-          <label class="tog"><input type="checkbox" id="guard" /><span><span class="name">Guard</span><br><span class="d">catches the planted decoy secret</span></span></label>
-          <label class="tog"><input type="checkbox" id="invariant" /><span><span class="name">Invariant</span><br><span class="d">catches anything the agent read earlier</span></span></label>
-        </div>
-      </div>
-    </div>
-    <div class="actions">
-      <button class="launch" id="launch">Run the attack live</button>
-      <label class="fld" style="min-width:200px;margin:0">
-        <select id="fixture" style="margin-top:2px" aria-label="Recorded run to replay"></select>
-      </label>
-      <button class="replay glass-inset" id="replay">Replay a recorded run</button>
-      <span class="rate" id="rate"></span>
-    </div>
+  <div class="page-head">
+    <p class="eyebrow">Arena</p>
+    <h1>Run the attack yourself, and watch <em>the guard stop it.</em></h1>
+    <p class="lede">Pick the AI model that plays the victim, switch the defences on or off, and run the poisoned Slack message that tells the assistant to send its keys to the attacker. <strong>Replay is instant and free.</strong> A live run uses a real model on Nebius and takes 20–60 s.</p>
+    <p class="scope"><strong>Honest scope.</strong> The Slack workspace and the assistant's loop are simulated here; the detectors are the real code (imported from <code>plugins/</code>) and the victim is a real model. It is a test bench over the same functions the <span class="mono">dsh</span> plugins call, not <span class="mono">dsh</span> itself. Every secret is a planted decoy (a canary); nothing real is at risk. A leak counts only when the attacker's server actually receives and decodes the decoy — never on the model's say-so. Every run streams to the <a href="/dashboard" id="dashLink2">live dashboard</a>.</p>
   </div>
 
-  <div id="result" hidden>
-    <!-- the verdict floats (glass); the transcript beneath it stays solid -->
-    <div class="banner glass">
-      <span class="badge pending" id="badge">running…</span>
-      <span class="mode" id="mode"></span>
-      <span class="otxt" id="otxt"></span>
+  <!-- The console: the same component as the site's hero console (same ids the
+       site's form submits here with: model / guard / invariant). -->
+  <section class="run glass" aria-labelledby="runLabel">
+    <div class="run__head">
+      <p class="eyebrow run__k" id="runLabel">Run the attack</p>
+      <p class="run__note">Real detectors · recorded runs · a live model as the victim</p>
+    </div>
+    <div class="run__grid">
+      <label class="fld">
+        <span class="fld__l">Victim model</span>
+        <span class="selw"><select class="sel" id="model"></select></span>
+      </label>
+      <fieldset class="fld" style="border:0;padding:0;margin:0;min-width:0">
+        <legend class="fld__l">Defenses</legend>
+        <div class="togs">
+          <label class="tog"><input type="checkbox" id="guard" /><span>Guard<small>catches the planted decoy</small></span></label>
+          <label class="tog"><input type="checkbox" id="invariant" /><span>Invariant<small>catches anything read earlier</small></span></label>
+        </div>
+      </fieldset>
+    </div>
+    <div class="run__acts">
+      <label class="fld">
+        <span class="fld__l">Recorded run</span>
+        <span class="selw"><select class="sel" id="fixture" aria-label="Recorded run to replay"></select></span>
+      </label>
+      <button class="btn btn--primary" type="button" id="replay">Replay a recorded run</button>
+      <button class="btn glass-inset" type="button" id="launch">Run live on Nebius</button>
+      <p class="run__cost" id="rate">Replay is instant and free. Live spends about six model calls and takes 20–60 s; six live runs per address per 10 minutes.</p>
+    </div>
+  </section>
+
+  <section id="result" hidden aria-labelledby="verdictLabel">
+    <h2 class="vh" id="verdictLabel">Verdict and transcript</h2>
+    <div class="verdict" id="verdictCard" role="status" aria-live="polite">
+      <div class="verdict__v" id="verdictWord"><span id="badge">Running…</span></div>
+      <p class="verdict__fact" id="otxt"></p>
+      <p class="verdict__meta"><span class="pill" id="mode" hidden></span><span id="foot"></span></p>
     </div>
     <div class="panel">
+      <p class="eyebrow">Transcript</p>
       <div class="timeline" id="timeline"></div>
-      <div class="foot" id="foot"></div>
     </div>
-  </div>
+  </section>
 </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="nav__brand" href="/"><svg class="mark" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="m-o" d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke-width="1.75"/><path class="m-i" d="M16 9v7.5" stroke-width="1.75"/><path class="m-i" d="M11.75 20h8.5" stroke-width="1.75"/></svg>No-Leak-MCP</a>
+    <a href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/">Site</a>
+    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026</span>
+  </div>
+</footer>
 
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* Liquid Glass runtime — the same two halves as the site (§4a there).
-     1. probe whether the engine really paints url() inside backdrop-filter
-        (WebKit/Blink yes, Gecko no); only then enable the refraction.
-     2. move the specular with the pointer, coalesced into one rAF, never
-        under Reduce Motion and never on a coarse pointer. */
+  /* Liquid Glass runtime — the same two halves as the site (§4a there). */
   (function initGlass() {
     const probe = document.createElement("div");
     probe.style.cssText = "position:absolute;left:-9999px;width:1px;height:1px;" +
@@ -298,7 +402,7 @@
     const ok = ((cs.backdropFilter || cs.webkitBackdropFilter || "").indexOf("url(") !== -1);
     probe.remove();
     if (ok) document.documentElement.setAttribute("data-glass-refract", "on");
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (reduce) return;
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     let pending = null, target = null, px = 0, py = 0;
     const paint = () => {
@@ -316,15 +420,25 @@
       if (!pending) pending = requestAnimationFrame(paint);
     }, { passive: true });
   })();
+
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  /* verdict words. Each badge also carries a colour and a border; the word is
-     what makes the state readable without the colour. */
-  const OUTCOMES = {
-    LEAKED: "Leaked — the attacker's server got the secret", DENIED_BY_GUARD: "Denied by the guard",
-    DENIED_BY_INVARIANT: "Denied by the invariant", EXFIL_ATTEMPTED: "Attempted, not delivered",
-    MODEL_DECLINED: "Model declined on its own", ERROR: "Error",
+  /* the same verdict words, tones and glyphs as the site's console: the word
+     carries the state, the glyph and the colour second it */
+  const LABEL = { LEAKED: "Leaked", DENIED_BY_GUARD: "Denied by the guard", DENIED_BY_INVARIANT: "Denied by the invariant",
+    EXFIL_ATTEMPTED: "Attempted, not delivered", MODEL_DECLINED: "Model declined", ERROR: "Error" };
+  const TONE = { LEAKED: "bad", DENIED_BY_GUARD: "ok", DENIED_BY_INVARIANT: "ok", EXFIL_ATTEMPTED: "amber", MODEL_DECLINED: "amber", ERROR: "amber" };
+  const ICO = {
+    bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 1.7 20.5h20.6L12 3.5Z"/><path d="M12 10v4.2"/><path d="M12 17.6h.01"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.6 20.4 6v6.1c0 5.3-3.5 9.4-8.4 11.2C7.1 21.5 3.6 17.4 3.6 12.1V6Z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.5"/></svg>',
+    amber: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5M12 16h.01"/></svg>'
   };
   let liveEnabled = false;
+
+  function word(tone, text, busy) {
+    $("verdictCard").setAttribute("data-tone", tone || "");
+    if (!tone) $("verdictCard").removeAttribute("data-tone");
+    $("verdictWord").innerHTML = (busy ? '<span class="spin" aria-hidden="true"></span>' : (ICO[tone] || "")) + '<span id="badge">' + esc(text) + "</span>";
+  }
 
   function fmtStep(s) {
     const cls = ["step", s.t];
@@ -332,7 +446,7 @@
     let head = s.t.replace(/_/g, " ");
     let body = "";
     if (s.t === "setup") { head = "setup"; body = esc(s.text); }
-    else if (s.t === "scorer") { head = "scorer — a second model reads the message (real Nebius)"; body = esc(s.text); }
+    else if (s.t === "scorer") { head = "scorer — a second model reads the message"; body = esc(s.text); }
     else if (s.t === "tool_call") { head = "the agent calls a tool"; body = "<code>" + esc(s.tool) + "</code>(" + esc(JSON.stringify(s.args || {})) + ")"; }
     else if (s.t === "tool_result") { head = "the tool answers → " + esc(s.tool); body = "<span class='kv'>" + esc(s.text) + "</span>"; }
     else if (s.t === "detector") { head = s.denied ? ("denied · " + esc(s.detector) + " stopped the call") : "no defence fired"; body = esc(s.text); }
@@ -344,17 +458,16 @@
 
   function render(data, mode) {
     $("result").hidden = false;
-    const b = $("badge");
-    b.className = "badge " + data.outcome;
-    b.textContent = OUTCOMES[data.outcome] || data.outcome;
-    $("mode").className = "mode " + mode;
-    $("mode").textContent = mode === "live" ? "Live — a real run on Nebius" : "Replay — a recorded run";
+    const o = data.outcome || "ERROR";
+    word(TONE[o] || "amber", LABEL[o] || o, false);
+    const m = $("mode");
+    m.hidden = false; m.className = "pill";
+    m.textContent = mode === "live" ? "Live — a real run on Nebius" : "Replay — a recorded run";
     $("otxt").textContent = data.outcomeText || "";
-    // animate steps in
     const tl = $("timeline"); tl.innerHTML = "";
     const steps = data.steps || [];
     let i = 0;
-    const delay = mode === "replay" ? 260 : 0;
+    const delay = (mode === "replay" && !reduce) ? 260 : 0;
     function add() {
       if (i >= steps.length) return;
       tl.insertAdjacentHTML("beforeend", fmtStep(steps[i]));
@@ -373,21 +486,22 @@
   }
 
   function setRate(r) {
-    if (!r) { $("rate").textContent = ""; return; }
-    $("rate").textContent = `live runs used: ${r.perIpUsed} of ${r.perIpMax} from this address per 10 min · ${r.globalUsed} of ${r.globalMax} today`;
+    if (!r) return;
+    $("rate").textContent = `Replay is instant and free. Live spends about six model calls and takes 20–60 s; ${r.perIpUsed} of ${r.perIpMax} live runs used from this address in the last 10 minutes.`;
   }
+  function liveOff(why) { $("launch").disabled = true; $("launch").textContent = "Live runs unavailable"; $("rate").textContent = "Replay is instant and free. " + why; }
 
   async function loadConfig() {
     const r = await fetch("/api/config").then(x => x.json()).catch(() => null);
-    if (!r) return;
+    if (!r) { liveOff("The arena API is not reachable right now."); return; }
     liveEnabled = r.liveEnabled;
     $("model").innerHTML = r.models.map(m => `<option value="${esc(m.key)}">${esc(m.label)}</option>`).join("");
     const fx = r.fixtures || [];
     $("fixture").innerHTML = fx.length
       ? fx.map(f => `<option value="${esc(f.id)}">${esc(f.label)}</option>`).join("")
-      : `<option value="">(no recorded replays)</option>`;
-    if (!fx.length) $("replay").disabled = true;
-    setRate(r.rate);
+      : `<option value="">(no recorded runs)</option>`;
+    if (!fx.length) { $("replay").disabled = true; $("replay").textContent = "No recordings"; }
+    if (r.rate && r.rate.perIpUsed) setRate(r.rate);
     // The site's hero console is a plain form whose no-JS path submits here:
     // ?model=<key>&guard=on&invariant=on. Honour it so the judge lands on the
     // same selection they made. Unknown values are ignored.
@@ -395,25 +509,28 @@
     if (q.get("model") && r.models.some(m => m.key === q.get("model"))) $("model").value = q.get("model");
     if (q.has("guard")) $("guard").checked = /^(on|1|true)$/i.test(q.get("guard"));
     if (q.has("invariant")) $("invariant").checked = /^(on|1|true)$/i.test(q.get("invariant"));
-    if (!liveEnabled) {
-      $("launch").disabled = true;
-      $("launch").textContent = "Live runs are off here — replay instead";
-    }
+    if (!liveEnabled) liveOff("Live runs are off on this deployment (no API key).");
   }
 
   $("launch").onclick = async () => {
-    $("launch").disabled = true; $("badge").className = "badge pending"; $("badge").textContent = "Running live…";
-    $("result").hidden = false; $("timeline").innerHTML = ""; $("otxt").textContent = "Starting the victim model on Nebius. Usually 20–60 s."; $("mode").textContent = "";
+    $("launch").disabled = true; $("replay").disabled = true;
+    $("result").hidden = false; $("timeline").innerHTML = ""; $("mode").hidden = true; $("foot").textContent = "";
+    word(null, "Running live on Nebius…", true);
+    $("otxt").textContent = "The victim model is reading the poisoned thread. Usually 20–60 s.";
     try {
       const r = await fetch("/api/attack", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ model: $("model").value, guard: $("guard").checked, invariant: $("invariant").checked }),
       });
       const data = await r.json();
-      if (!r.ok) { $("badge").className = "badge ERROR"; $("badge").textContent = r.status === 429 ? "Live limit reached" : "Error"; $("otxt").textContent = (data.error || "failed") + (r.status === 429 ? " Replay is instant and unlimited." : ""); if (data.rate) setRate(data.rate); return; }
+      if (!r.ok) {
+        word("amber", r.status === 429 ? "Live limit reached" : "Error", false);
+        $("otxt").textContent = (data.error || "failed") + (r.status === 429 ? " Replay is instant and unlimited." : "");
+        if (data.rate) setRate(data.rate); return;
+      }
       render(data, "live"); setRate(data.rate);
-    } catch (e) { $("badge").className = "badge ERROR"; $("badge").textContent = "Error"; $("otxt").textContent = String(e) + " Replay still works."; }
-    finally { $("launch").disabled = !liveEnabled; }
+    } catch (e) { word("amber", "The live run failed", false); $("otxt").textContent = String(e) + " Replay still works."; }
+    finally { $("launch").disabled = !liveEnabled; $("replay").disabled = false; }
   };
 
   $("replay").onclick = async () => {
@@ -421,9 +538,9 @@
     try {
       const r = await fetch("/api/replay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: $("fixture").value }) });
       const data = await r.json();
-      if (!r.ok) { $("result").hidden = false; $("badge").className = "badge ERROR"; $("badge").textContent = "Error"; $("otxt").textContent = data.error || "failed"; return; }
+      if (!r.ok) { $("result").hidden = false; word("amber", "Replay failed", false); $("otxt").textContent = data.error || "failed"; return; }
       render(data, "replay");
-    } catch (e) { alert(String(e)); }
+    } catch (e) { $("result").hidden = false; word("amber", "Replay failed", false); $("otxt").textContent = String(e); }
     finally { $("replay").disabled = false; }
   };
 

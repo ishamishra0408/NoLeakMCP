@@ -100,6 +100,22 @@ Nothing above is submitted as event work.
   badge), not an app post. `eval/slack/plant.mjs` now posts as a thread reply (new required
   `SLACK_THREAD_TS`) with the verbatim poison. Ledger updated: this captures the *ingress*, not the block.
 
+### 2026-09-08 — one product: palette restored, three surfaces unified, demo-footage slots
+- The colour-wheel palette (`279361d`) is reverted to the previous five role tokens (accent blue,
+  green, red, amber, brass, with the matching light values) on the site, the arena and the dashboard;
+  the wheel's mapping table, footer legend and `.team-*` section classes are gone. The plain-language
+  copy from the same commit stays and is tightened further.
+- The arena and the dashboard now share the site's token architecture (light on `:root`, dark declared
+  twice), its type and space scales, its bar, console, verdict card, stats, table and footer components,
+  and honour the site's stored theme choice. Glass is the bar and the console only (site 2, arena 2,
+  dashboard 1); the arena's glass verdict banner and the dashboard's glass switches became opaque
+  components.
+- "Built during the event" is removed from the site; provenance stays in `README.md`, here, and the
+  `pre-event` / `event-start` tags. "What it does not catch" is unchanged.
+- Two drop-in slots for the owner's screen recordings, `site/assets/demo-attack.{mp4|webm|gif}` and
+  `demo-blocked.{mp4|webm|gif}` (+ optional `demo-<slot>-poster.png`), detected server-side like the
+  screenshot, served by basename with byte ranges, reduced-motion aware. One arena test added (18).
+
 ## Still owed before submission (tracked, not hidden)
 - Slack-surface `guard/deny` line and Beeceptor leak-vs-dark captures (audit log was reset before
   they were copied out; the new screenshot shows the poison, not a denial).

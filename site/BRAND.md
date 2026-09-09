@@ -4,37 +4,97 @@
 **Positioning.** Silent-egress observability and governance for the MCP Slack surface — three registrations into dsh, zero agent-loop edits, the leak denied at assembly. *Said plainly, which is how the page says it first:* an AI assistant reads one poisoned Slack message and hands over your keys without anyone seeing; No-Leak-MCP watches what the assistant is about to send and stops the message if a secret is inside.
 **Voice.** Forensic, plain, numerate. Every number carries its denominator (5/5, 7 of 8). Claims and owed evidence are stated in the same breath. No exclamation marks, no emoji, no "revolutionary".
 
+## One product, three pages (consistency pass, 2026-09-08)
+
+The site (`site/index.html`), the arena (`render/arena/public/index.html`) and the dashboard
+(`realtime/dashboard/index.html`) are three pages of one product, and a judge moving between
+them must not feel a seam. The rules, all of them checkable by reading the three files side by
+side:
+
+- **One token block.** All three declare the same colour tokens with the same values, in the
+  same architecture (full light palette on bare `:root`, dark declared twice — see the palette
+  section), the same type tokens and scale (`--fs-xs … --fs-h2`), the same space scale
+  (`--s-1 … --s-8`), the same `--r 14` / `--r-s 6` / `--hit 44` / `--nav-h 64` / `--gutter 24`
+  / `--measure 54ch`, and the same motion tokens. The arena and dashboard used to be dark-first
+  with their own light neutrals (`#f6f8fa`, `#1f2328`, `#59636e`, `#d0d7de`) and fixed 13–14px
+  type; they now use the site's values and scale.
+- **The theme choice travels.** The site's System / Light / Dark control stores `nlm-theme`;
+  the arena and the dashboard read the same key before first paint, so a reader who chose Dark
+  on the site lands on a dark arena. The control itself lives on the site only.
+- **One bar.** Every page opens with the same sticky glass bar (`.site-header` › `.nav`):
+  mark + wordmark on the left linking home, links on the right, 64px tall (56 on phones), the
+  current page underlined in brass. The arena and dashboard bars carry Site · Arena ·
+  Dashboard; the site's carries its sections plus Arena, Dashboard, GitHub and the theme
+  control. The bar is the only refracting element on each page.
+- **One page-head.** Under the bar, every page states what it is for the same way: an
+  `.eyebrow` (small caps, brass), a serif `h1` with one brass italic, a `.lede` in `--dim` at
+  `--fs-lg`, then one paragraph of scope at `--fs-sm`. The site's hero is this pattern with the
+  console beside it.
+- **One console.** The arena's console is the site's hero console: the same `.run` glass pane
+  (radius 22, pad 14, controls at 8), the same `.fld__l` labels, `.sel` select with the drawn
+  chevron, `.tog` toggles, `.btn--primary` (ink fill) for Replay and `.btn.glass-inset` for
+  Live, the same cost line under the buttons. Replay is the default on both.
+- **One verdict.** The arena's verdict is the site's `.verdict` card: a solid `--panel` card
+  whose border takes the tone (`--ok-line` / `--bad-line` / `--amber-line`), the verdict word
+  in Instrument Serif with the same glyph the site's console uses, the fact line in `--ink`,
+  then the meta line. The words are the site's: Leaked · Denied by the guard · Denied by the
+  invariant · Model declined · Attempted, not delivered · Error. The glass banner is gone.
+- **One card, one table, one stat.** `.card`/`.panel` are `--panel` on a `--line` hairline at
+  radius 14 with 24–28px padding; `.table` is the site's wrapper (radius 14, `th` in `--dim`
+  small caps, 12×16 cells); the dashboard's totals are the site's `.stats` (a 1px `--line`
+  grid of `--panel` cells, serif number, `--dim` label). The dashboard's section headings are
+  `h2.eyebrow`, so the outline holds (one `h1`, then `h2`s) and the label style matches the
+  site's section eyebrows.
+- **One footer.** Brand, GitHub, the other two pages, the licence line.
+- **Glass only where it floats:** the bar on every page, the console on the site and the
+  arena. Nothing else. Site 2, arena 2, dashboard 1; nothing nested. The dashboard's two
+  defence switches are opaque `.switch` buttons in the `.tog` idiom (a dot, a tone border, the
+  state in words) — they sit on the page ground as content-layer controls and an opaque
+  control never buys its contrast down.
+- **Density is the same.** Body `--fs-base`/1.6 everywhere; the arena's transcript and the
+  dashboard's tables run at `--fs-sm`, the same step down the site uses for captions, table
+  cells and the console's labels. No page has its own smaller world.
+
 ## Copy voice — plain first, term of art second (rewrite, 2026-09-08)
 
 The owner's brief: a first-time reader must get **what goes wrong, why it is bad, and what we do
-about it** in one scan. The rules the copy now obeys on all three surfaces:
+about it** in one scan, and each page must say what it is for in one line at the top. The rules
+the copy obeys on all three surfaces:
 
+- **Each page opens with its purpose, in one line.** Site: "No-Leak-MCP stops that message
+  before it leaves" (the first sentence of the lede, under a headline that states the reader's
+  situation). Arena: "Run the attack yourself, and watch the guard stop it." Dashboard: "What
+  the defences are doing right now."
 - **The plain sentence comes first; the term of art may follow once, in brackets or after a
-  dash, never instead.** "Slack would have fetched the link itself to build a preview (an
-  'unfurl')". "stopped before it was sent (the harness's `tools/pre-execute` hook)". "the
-  harness that runs the assistant (`@deepseek-ai/dsh 0.1.1-rc.2`)".
+  dash, never instead.** "Slack would have fetched it to build a link preview (an 'unfurl')".
+  "stopped before it was sent (the harness's `tools/pre-execute` hook)". "the harness that runs
+  the assistant (`@deepseek-ai/dsh 0.1.1-rc.2`)".
 - **Jargon expanded on first use, everywhere it appears:** MCP → "the Slack connection (MCP)";
   dsh / harness → "the harness that runs the assistant"; plugin → "small plugins … the
   assistant's own loop is untouched"; canary → "a planted decoy (a canary)"; provenance →
   "anything the agent read earlier"; invariant → "stops anything the agent read from going
   out"; ASR → "attack success rate (ASR), the share of runs in which the decoy actually reached
   the attacker's server"; `tools/pre-execute` → "before any tool call leaves the harness";
-  unfurl → Slack fetching the link from its own servers to build the preview, so the secret
-  leaves without anyone clicking; kill-chain "#4" → "kill-chain step 4"; "the drop" → "the
-  attacker's server"; "exfil" → "send the secret".
+  kill-chain "#4" → "kill-chain step 4"; "the drop" → "the attacker's server"; "exfil" → "send
+  the secret".
+- **Nothing is said twice.** The scope line ("three small plugins for dsh … the assistant's own
+  loop is untouched … not a Slack app") lives in the hero; the defence section no longer
+  repeats it in a second sentence. The arena's intro no longer explains itself twice ("where
+  the attack meets the defence" went). The "Built during the event" section went — provenance
+  lives in `README.md`, `CHANGELOG.md` and the `pre-event` / `event-start` tags, and the footer
+  says so in six words.
 - **The stakes are stated in human terms once, in the attack's third beat:** a stolen credential
   is a working login; whoever holds it can read the repositories, cloud accounts and services
   it opens, as your team, until someone notices and rotates it. The CVE is cited as support
   ("reported as CVE-2025-34072"), not as the explanation.
-- **Buttons and labels are plain verbs in sentence case:** Replay a recorded run · Run live on
-  Nebius · Run the attack live · Turn the guard on and replay · Guard is on — turn it off ·
-  Open the arena. No emoji on any control or verdict; the word carries the state.
+- **Buttons and labels are plain verbs in sentence case, identical on the site and the arena:**
+  Replay a recorded run · Run live on Nebius · Turn the guard on and replay · Guard is on —
+  turn it off · Open the arena. No emoji on any control or verdict; the word carries the state.
 - **Simpler is not vaguer.** Every number on the page still matches `README.md` and
   `eval/out/results.md` (1.00 → 0.00; 5/5; 0.40 (2/5) and 1/1; 0.60 (3/5) and 3/4; 7 of 8 at
-  0.95; 0 of 25; N=5; 53 tests = 22 + 9 + 5 + 17; six live runs per address per 10 minutes;
-  20–60 s). The evidence ledger's "Not yet." row and the honest-scope section are kept in
-  full, and the limits paragraphs are now titled **Limits** so they are easier to find, not
-  harder.
+  0.95; 0 of 25; N=5; six live runs per address per 10 minutes; 20–60 s). The evidence ledger's
+  "Not yet." row and the honest-scope section ("What it does not catch — before a judge asks")
+  are kept in full, word for word.
 - **We do not claim to be unhackable.** The page says what is stopped (a demonstrated attack,
   at a named hook) and exactly where the boundary is (the unfurl fetch and DNS are outside the
   harness; untagged secrets are the invariant's job and it is opt-in).
@@ -43,14 +103,14 @@ about it** in one scan. The rules the copy now obeys on all three surfaces:
 
 The first screen is not a poster for the arena; it **is** the arena's front door. Left: the
 reader's situation in three short sentences ("A teammate posts one message. Your AI assistant
-reads it, believes it, and hands over your keys. The channel looks normal."), the solution in
-two ("No-Leak-MCP watches what the assistant is about to send. If a secret is inside, the
-message is stopped before it leaves") and the scope in two ("three small plugins for `dsh`,
-the harness that runs the assistant … the assistant's own loop is untouched; it guards the
-Slack connection (MCP), it is not a Slack app"). Right: a working console — victim-model picker, guard and invariant toggles,
-**Replay a recorded run** (primary) and **Run live on Nebius** (secondary) — wired to the
-arena's own API (`GET /api/config`, `POST /api/replay`, `POST /api/attack`), with the verdict
-rendered inline in a box whose height is reserved so nothing below ever moves.
+reads it, believes it, and hands over your keys. The channel looks normal."), the fix in one
+("No-Leak-MCP stops that message before it leaves") and the scope in two ("three small plugins
+for `dsh`, the harness that runs the assistant … the assistant's own loop is untouched; it
+guards the Slack connection (MCP), it is not a Slack app"). Right: a working console —
+victim-model picker, guard and invariant toggles, **Replay a recorded run** (primary) and **Run
+live on Nebius** (secondary) — wired to the arena's own API (`GET /api/config`,
+`POST /api/replay`, `POST /api/attack`), with the verdict rendered inline in a box whose height
+is reserved so nothing below ever moves.
 
 Rules the console obeys, and any change to it must too:
 
@@ -61,14 +121,14 @@ Rules the console obeys, and any change to it must too:
 - **It is a real form.** `<form action="/arena" method="get">` with `model`, `guard`,
   `invariant`; without JavaScript it submits to the arena, which pre-selects the same choice.
 - **Every state has a word, a glyph and a tone, never colour alone:** Leaked (`--bad`, red),
-  Denied by the guard / by the invariant (`--ok`, blue — the defence's colour under the wheel),
-  Model declined / Attempted, not delivered / limit reached / live off / error (`--amber`,
-  orange). The legend under the idle box names the three outcomes before anything is run, and
-  says in plain words what each means ("the decoy reached the attacker's server", "the
-  attacker got nothing", "the victim model refused on its own").
+  Denied by the guard / by the invariant (`--ok`, green), Model declined / Attempted, not
+  delivered / limit reached / live off / error (`--amber`). The legend under the idle box names
+  the three outcomes before anything is run, and says in plain words what each means ("the
+  decoy reached the attacker's server", "the attacker got nothing", "the victim model refused
+  on its own").
 - **The verdict states the one fact that matters** — did the attacker's drop receive and decode
   the canary — and links to the arena transcript and, for a live run, to the public
-  `/api/drop/<runId>` receipt.
+  `/api/drop/<runId>` receipt. Both links are 44px targets (block padding on the inline box).
 - **A replay that is not the exact selection says so** ("No recording for … — nearest shown.
   Run live for the exact one"). It never passes a neighbouring recording off as the requested
   one.
@@ -80,9 +140,10 @@ section. The scene is now the grid and the glow only.
 
 **The attack is told in three Slack beats**, each in Slack's own frame where it happened in
 Slack: (1) the message that arrived — the redacted screenshot, or the recreation when the file
-is absent; (2) what the agent did — the harness log, one toggle apart, which never was in
-Slack; (3) the recap that never mentioned it — the victim agent's standup summary, quoted
-verbatim from the screenshot. `.slackcard` and `.slackcard--recap` are the same component.
+is absent; (2) what the agent did — the demo footage when it exists (see "Adding the demo
+footage"), then the harness log, one toggle apart, which never was in Slack; (3) the recap that
+never mentioned it — the victim agent's standup summary, quoted verbatim from the screenshot.
+`.slackcard` and `.slackcard--recap` are the same component.
 
 **The theme control is demoted, not removed.** Icon-only on the bar (monitor / sun / moon),
 each radio keeping a text name that is visually hidden there and shown inside the mobile
@@ -94,8 +155,9 @@ roving `tabindex`, arrow/Home/End keys and persistence are unchanged.
 The site ships **light and dark**, and the reader can override the system setting with the
 System / Light / Dark segmented control in the nav (stored in `localStorage` under
 `nlm-theme`; choosing System removes the key, so the platform setting is the resting state).
+The arena and the dashboard read the same key.
 
-The colour architecture is a rule the stylesheet states and a script checks:
+The colour architecture is a rule the stylesheet states and a script checks, on all three files:
 
 1. **Every colour token gets its full value on bare `:root`** — that block *is* the light palette.
 2. The dark palette is declared **twice, byte-identical**: once inside
@@ -110,113 +172,103 @@ The colour architecture is a rule the stylesheet states and a script checks:
 `--line` is a *decorative* hairline (separators, table rules). `--line-strong` bounds a
 **control** and is held to ≥ 3:1 against its own surface.
 
-### The cybersecurity colour wheel is the semantic palette (2026-09-08)
+### The five role tokens (restored 2026-09-08)
 
-Reference: [itlawco.com/the-cybersecurity-colour-wheel](https://itlawco.com/the-cybersecurity-colour-wheel/),
-which defines seven teams and gives no hex codes; the hexes below are ours, chosen for ≥ 4.5:1
-as text on every surface they sit on in each theme. Earlier feedback said the colours "look
-nice but lack meaning"; this is the answer. **Every hue on the three surfaces carries one of
-these seven meanings and no other**, the role tokens (`--ok --bad --amber --accent --brass`)
-are aliases onto the wheel so a component names the meaning it carries, and the footer of the
-site states the mapping in one line with a swatch beside each word. README already calls the
-project a "Blue-team observability + governance layer", so blue is the product's own colour.
-
-| Team (wheel meaning) | Light | Dark | Where it appears |
-|---|---|---|---|
-| **Red** — simulates attacks to expose weaknesses | `#b3251a` | `#f85149` | the attack section (eyebrow, italic, beat numbers), the hero's italic "The channel looks normal", **Leaked** verdicts and badges, `exfil/hit`, the OFF-column ASR, the dashboard LEAK rows and the "off" state of a defence switch |
-| **Blue** — defends, watches, responds | `#0b5fd0` | `#58a6ff` | the product's identity: the hero eyebrow, links, the defence section, **Denied** verdicts and badges, `guard/deny` / `invariant/deny`, the ON-column ASR, the toggles' checkmarks, the "on" state of a defence switch, the focus ring, the dashboard DENY rows |
-| **Purple** — bridges red and blue (purple teaming) | `#6438b8` | `#b88cff` | the arena: its name in the arena `h1`, the launch button, the "Live" mode pill, the console's "Run the attack" eyebrow on the site, the purple dot on every Arena link, the dashboard's `arena` source pill |
-| **Yellow** — builds software that resists attack | `#7d5f1e` | `#c8a96a` | the code-level story: the hook/seat pills on the three control cards, the shield stroke of the mark, the dashboard's `dsh` source pill (events from the real plugins). This is the former `--brass`; `--brass` is now an alias of `--yellow` |
-| **Green** — automates security so systems stay current | `#136b36` | `#3fb950` | the automated checks: the proof section (eyebrow, italic), the dashboard TRIAL rows (eval runs) |
-| **Orange** — trains people, builds awareness | `#9a3f00` | `#f0883e` | awareness and limits: the honest-scope section, every **Limits** paragraph's rule, "opt-in, default OFF", "Not yet." in the ledger, Declined / Attempted / limit-reached / error states, scorer verdicts (detection only). This is the former `--amber`; `--amber` is now an alias of `--orange` |
-| **White** — oversees, moderates, governs | `#ffffff` (swatch) | `#e6edf3` (swatch) | governance and provenance: the "Built during the event" section and the evidence ledger, whose eyebrows carry a white disc with a hairline and whose text is `--ink`. White is never a text colour |
-
-Rules: **colour is never the only carrier** — every red or blue state also carries its word
-(Leaked / Denied / DENY / LEAK / "Guard is off") and, on the site's verdicts, a glyph; the
-footer legend pairs each swatch with its word; identifiers (`code`) are neutral ink on
-`--code-soft`, because a blue tool name would read as "defence" under this system; tool names
-in the terminal cards are ink for the same reason. A section declares its team with a class
-(`.team-red` … `.team-white`) that sets `--team`, and the eyebrow, its swatch, the heading's
-italic, beat numbers, list dashes and timeline dates read `--team`; the hero is blue-team with
-one deliberate red italic.
+A "cybersecurity colour wheel" mapping (seven hues, one security-team meaning each) was tried
+in `279361d` and **reverted** the same day at the owner's request; the palette below is the
+one from `d690856`, byte for byte, and its token names are the real definitions again, not
+aliases. The plain-language copy from that commit stayed. Colour is never the only carrier:
+every state also has its word and, on the verdicts, a glyph.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | `#f5f6f9` | `#0b0e14` | page ground (dark value shared with arena + dashboard) |
+| `--bg` | `#f5f6f9` | `#0b0e14` | page ground, all three surfaces |
 | `--bg-2` | `#eceff4` | `#0d1119` | alternating section ground |
-| `--panel` / `--panel-2` | `#ffffff` / `#f4f6fa` | `#141925` / `#0f1420` | cards, terminals |
+| `--panel` / `--panel-2` | `#ffffff` / `#f4f6fa` | `#141925` / `#0f1420` | cards, tables, terminals, the console's controls |
 | `--line` | `#c9d0da` | `#232b3a` | decorative hairlines |
 | `--line-strong` | `#7b8695` | `#6b788c` | control boundaries (≥ 3:1) |
 | `--ink` / `--dim` | `#101620` / `#525d6d` | `#e6edf3` / `#8b98a9` | text / secondary text |
 | `--on-ink` / `--ink-hover` | `#ffffff` / `#2a3546` | `#0b0e14` / `#ffffff` | text on an `--ink` fill; primary-button hover |
-| `--red` `--blue` `--purple` `--yellow` `--green` `--orange` `--white` | see the wheel table | see the wheel table | the seven meanings |
-| `--accent` / `--ok` / `--bad` / `--amber` / `--brass` / `--focus` | `var(--blue)` / `var(--blue)` / `var(--red)` / `var(--orange)` / `var(--yellow)` / `var(--blue)` | same aliases (declared once, on `:root`) | role names kept so components and the console's `data-tone` read as before; each resolves to a wheel hue |
-| `--accent-soft` / `--code-soft` | `rgba(11,95,208,.07)` / `rgba(16,22,32,.06)` | `rgba(88,166,255,.10)` / `rgba(230,237,243,.08)` | nav hover / inline `code` ground |
-| `--ok-line` / `--bad-line` / `--amber-line` / `--brass-line` / `--purple-line` / `--green-line` | the wheel hue at .8 (brass .75) alpha | the wheel hue at .8 (brass .7) | tinted status borders, each ≥ 3:1 on its surface |
-| `--glass-*` (12 tokens) | white tints and ink hairlines | ink tints and white hairlines | the Liquid Glass material — see its own section. The old `--scrim` was retired when the nav moved onto these |
-| `--grid-ink`, `--glow-a/b` | light values | dark values | the hero scene (grid and glow only; the scenery-plane tokens `--wall-*`, `--frag-bg`, `--seal-bg` were deleted with the planes) |
+| `--accent` | `#0b5fd0` | `#58a6ff` | links, inline `code`, tool names in the terminal cards and the transcript, the spinner, the dashboard's TRIAL rows and `arena` source pill |
+| `--ok` | `#136b36` | `#2ea043` | a defence that held: Denied verdicts, `guard/deny` / `invariant/deny`, the ON-column ASR, "Yes" in the ledger, checked toggles, the dashboard's DENY rows, the connected pill |
+| `--bad` | `#b3251a` | `#f85149` | a leak: Leaked verdicts, `exfil/hit`, the OFF-column ASR, LEAK rows, the "off" state of a defence switch |
+| `--amber` | `#7a5200` | `#d29922` | a caveat: Model declined / Attempted / limit reached / live off / error, "opt-in, default OFF", "Not yet." in the ledger, scorer verdicts (detection only) |
+| `--brass` | `#7d5f1e` | `#c8a96a` | the editorial voice: eyebrows, the one italic in each heading, beat and card numbers, list dashes, the mark's shield, the current-page underline on the bar, the hook pills, the `dsh` source pill |
+| `--focus` | `#7d5f1e` | `#c8a96a` | the focus ring on all three surfaces (2px, 3px offset) |
+| `--accent-soft` | `rgba(11,95,208,.07)` | `rgba(88,166,255,.10)` | nav hover, inline `code` ground, the transcript's arrival flash |
+| `--ok-line` / `--bad-line` / `--amber-line` / `--brass-line` | the hue at .8 (brass .75) alpha | the hue at .8 (brass .7) | tinted status borders, each ≥ 3:1 on its surface |
+| `--glass-*` (12 tokens) | white tints and ink hairlines | ink tints and white hairlines | the Liquid Glass material — see its own section |
+| `--bar-tint` | `rgba(255,255,255,.72)` | `rgba(20,25,37,.74)` | the bar's Regular tint (the site's detached-nav tint, used at rest on the arena and dashboard) |
+| `--grid-ink`, `--glow-a/b` | light values | dark values | the hero scene (site) and the fixed soft field behind the arena and dashboard |
 | `--shadow-1`, `--shadow-seg`, `--glass-shadow` | ink-tinted | black | elevation |
-| `--slack-*` (19 tokens) | Slack's own **light** theme | Slack's own **dark** theme | the recreated thread and the recap card, so they read true in either appearance |
+| `--slack-*` (19 tokens, site only) | Slack's own **light** theme | Slack's own **dark** theme | the recreated thread and the recap card |
 
-Measured with an in-page script over every visible text-bearing element (329 pairs per theme
-on the site at 1280, 321 at 375; 2026-09-08 after the colour-wheel and copy pass), compositing
-every translucent layer over the real backdrop (`alpha·tint + (1−alpha)·backdrop`, down to
-`body`): **0 pairs below 4.5:1** for body text (3:1 for large text) in either theme. Worst
-three, light: 5.12 / 5.12 / 5.12 (the defence heading's blue italic on `--bg-2`, large text);
-dark: 5.24 / 5.24 / 5.24 (red "Leaked" and the OFF-column cells on `--panel`). Text on glass
-bottoms out at 5.66 light (`.seg__t`) / 5.86 dark. Control borders bottom out at 3.42:1 light
-(the skip link and the tab list) and 4.09:1 dark (the console's select). Arena, with a
-replayed verdict on screen: light 4.96 / 5.22 / 5.22 (the blue Denied badge on its wash over
-the glass banner), dark 4.64 / 4.76 / 4.76 (the red Leaked badge, likewise); its control
-borders 3.60 light / 4.09 dark. Dashboard: light 5.74 ×3, dark 5.24 ×3; borders 3.47 light /
-4.09 dark. The dark green moved `#2ea043` → `#3fb950` in the pass (5.21 → 6.91 on `--panel`).
+Measured 2026-09-08 after the revert and the consistency pass, with an in-page script over
+every visible text-bearing element (one pair per element; 116 on the site at 1280 and 106 at
+375, 48 on the arena with a replayed run on screen, 276 on the dashboard), compositing every
+translucent layer over the real backdrop (`alpha·tint + (1−alpha)·backdrop`, down to
+`body`): **0 pairs below 4.5:1** (3:1 for large text) in either theme on any surface. Worst
+three — site light 5.51 / 5.66 / 5.66 (the brass eyebrow on `--bg`; the segmented control's
+labels on the glass bar), site dark 5.86 / 5.86 / 5.99 (the same labels; the toggles' small
+text on `--panel`); arena light 4.82 / 4.94 / 5.46 (inline `code` on `--accent-soft`, twice;
+the dashboard link), arena dark 5.00 / 5.11 / 5.11 (`code`; the transcript's step labels);
+dashboard light 5.51 ×3 (the eyebrows), dashboard dark 5.21 ×3 (green ON-column cells on
+`--panel`). Control borders bottom out at 3.42 light (the skip link on all three, and the
+dashboard's switches) / 3.89 dark (a checked toggle's `--ok-line` border on the arena console);
+the segmented control's selected knob is a state indicator inside that bordered control and is
+not counted as a boundary. Hit targets: 0 under 44×44 on any surface at 1280 or 375.
 
 Non-colour tokens (type scale, space scale, motion, radius, `--hit:44px`) are theme-independent
 and live only on `:root`.
 
 ## Type — one system on all three surfaces
 
-The site, the arena (`render/arena/public/index.html`) and the dashboard
-(`realtime/dashboard/index.html`) load the **same** Google Fonts stylesheet — the only
-external font origin — and declare the same three family tokens, so a judge moving between
-them sees one product. `tests/arena.test.mjs` asserts the stylesheet is loaded once per
-surface and that no system-font body stack is left.
+The site, the arena and the dashboard load the **same** Google Fonts stylesheet — the only
+external font origin — and declare the same three family tokens **and the same scale**.
+`tests/arena.test.mjs` asserts the stylesheet is loaded once per surface and that no
+system-font body stack is left.
 
-- Display: **Instrument Serif** (400, italic for the emphasised phrase). Headlines, the hero
-  console's verdict word, the arena and dashboard `h1`, the dashboard's stat numbers.
+- Display: **Instrument Serif** (400, italic for the emphasised phrase). Headlines, the
+  console's and the arena's verdict word, the arena and dashboard `h1`, the stat numbers.
 - Text: **IBM Plex Sans** (400/500/600). Body, UI, tables, the console's controls.
-- Code: **IBM Plex Mono** (400/500). Tool names, seats, URLs, evidence paths, the arena's
+- Code: **IBM Plex Mono** (400/500). Tool names, seats, URLs, evidence paths, the transcript's
   key/value lines.
 - Tokens: `--serif:"Instrument Serif", "Iowan Old Style", Georgia, serif`;
   `--sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
   `--mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace`.
-- Site scale (all `clamp()` in `rem`, so it tracks the browser's font-size setting; column
-  counts are `em`-based so they drop as text grows): display `clamp(2.5rem, …, 4.75rem)/1.02`,
-  capped in the hero to `clamp(2.25rem, …, 3.75rem)` so it shares the row with the console;
-  h2 `clamp(1.75rem, …, 2.75rem)/1.1`; body `1rem–1.0625rem/1.6`; small `.875rem`; mono
-  `.75–.8125rem`. Eyebrows: Plex Sans 600, `.75rem`, tracking `.14em`, uppercase, in the
-  section's colour-wheel team colour with an 8px swatch before the text (see the palette).
-- Arena and dashboard: fixed pixel sizes (14px body, 26px / 24px serif `h1`, 30px serif
-  stat numbers), because those pages predate the scale and stay self-contained.
-- Measure: `--measure:54ch` on the site, `54ch` on the arena intro and the dashboard note.
-  `ch` is the advance of "0"; in Plex Sans running text averages ~1.35 characters per ch, so
-  54ch is ~73 characters a line — inside the 45–75 band. 57ch measured 78.
+- Scale (all `clamp()` in `rem`, so it tracks the browser's font-size setting; column counts
+  are `em`-based so they drop as text grows): display `clamp(2.5rem, …, 4.75rem)/1.02`, capped
+  in the hero to `clamp(2.25rem, …, 3.75rem)` so it shares the row with the console; h2 (and
+  the arena and dashboard `h1`) `clamp(1.75rem, …, 2.75rem)/1.1`; body `1rem–1.0625rem/1.6`;
+  small `.875rem`; mono `.75–.8125rem`. Eyebrows: Plex Sans 600, `.75rem`, tracking `.14em`,
+  uppercase, brass — the section labels on the site, the `h2`s on the dashboard, the console's
+  "Run the attack" on both consoles.
+- Measure: `--measure:54ch` for every paragraph, lede, caption, list item and transcript line
+  on all three surfaces. `ch` is the advance of "0"; in Plex Sans running text averages ~1.35
+  characters per ch, so 54ch is ~73 characters a line — inside the 45–75 band. Measured at
+  1280: site 64–73, arena 71–74, dashboard 73–74 (its event-feed rows are one-line log entries,
+  142–156, recorded as such, not body copy). On phones the lede steps down to 1.05rem so a
+  343px column still holds 47+ characters.
 
 ## Spacing, radius, motion
-- Space scale (px): 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 128. Section padding 96 desktop / 64 mobile. Container 1120px, gutter 24 / 16.
-- Radius: 6 (buttons, code chips), 14 (cards), 999 (pills). No radius above 14 except pills.
-- Radius, console: concentric — 22 outer, 14 pad, 8 inner (`--glass-r-in`), the arena console's own numbers.
-- Motion (HIG: purposeful, brief, reversible): micro 180ms, enter 320ms, leave 200ms, indicator move 280ms — every UI transition inside 150–400ms. Entering uses `--ease-out cubic-bezier(0,0,.2,1)`, leaving `--ease-in cubic-bezier(.4,0,1,1)`, standard `--ease cubic-bezier(.2,.7,.2,1)`. Three documented exceptions: the statistic counter (900ms, content not chrome), the live-run spinner (900ms loop, content not chrome, stopped under Reduce Motion while the word "Running" stays) and the scroll parallax (no duration — it is bound to scroll progress). A theme change suppresses every transition for that frame. Parallax plane rates 0.04 / 0.06 (the grid and the glow; the four scenery planes were cut). The **scroll** offset is native — `animation-timeline: view(block)` behind `@supports (animation-timeline: view())` — with the JS `translate3d` loop as the fallback only where `CSS.supports('animation-timeline: view()')` is false; the script skips the plane transform entirely on the native path, so the two never fight. The **pointer** depth (4–6px, `(hover:hover) and (pointer:fine)` only) rides a separate `.layers__depth` child in both paths. Every effect is a `transform`/`opacity` change — never layout. `prefers-reduced-motion`: **both** parallax paths, ticking and the spinner are off; reveals become 200ms opacity fades.
-- Loading: the console's outcome box reserves the height of its tallest state (268px desktop, 272px mobile) and its cost line reserves two lines, so no verdict, error or `/api/config` answer moves anything on the page. Measured: 0px shift across every state.
+- Space scale (px): 4 · 8 · 16 · 24 · 32 · 48 · 64 · 96 (`--s-1 … --s-8`), the same tokens on
+  all three surfaces. Site section padding 96 desktop / 64 mobile; the arena and dashboard
+  page-head 48 above / 32 below, blocks 24 apart, footer 32/48. Container 1120px, gutter 24 / 16.
+- Radius: 6 (buttons, code chips, the dashboard's switches and input), 14 (cards, tables,
+  the stats grid, the verdict, the transcript panel, the demo boxes), 999 (pills). No radius
+  above 14 except pills.
+- Radius, consoles: concentric — 22 outer, 14 pad, 8 inner (`--glass-r-in`) on the site and the
+  arena, the same numbers.
+- Motion (HIG: purposeful, brief, reversible): micro 180ms, enter 320ms, leave 200ms, indicator move 280ms — every UI transition inside 150–400ms. Entering uses `--ease-out cubic-bezier(0,0,.2,1)`, leaving `--ease-in cubic-bezier(.4,0,1,1)`, standard `--ease cubic-bezier(.2,.7,.2,1)`. Three documented exceptions: the statistic counter (900ms, content not chrome), the live-run spinner (900ms loop, content not chrome, stopped under Reduce Motion while the word "Running" stays) and the scroll parallax (no duration — it is bound to scroll progress). A theme change suppresses every transition for that frame. Parallax plane rates 0.04 / 0.06 (the grid and the glow; the four scenery planes were cut). The **scroll** offset is native — `animation-timeline: view(block)` behind `@supports (animation-timeline: view())` — with the JS `translate3d` loop as the fallback only where `CSS.supports('animation-timeline: view()')` is false; the script skips the plane transform entirely on the native path, so the two never fight. The **pointer** depth (4–6px, `(hover:hover) and (pointer:fine)` only) rides a separate `.layers__depth` child in both paths. Every effect is a `transform`/`opacity` change — never layout. `prefers-reduced-motion`: **both** parallax paths, ticking, the spinner and the arena's step-by-step arrival are off; reveals become 200ms opacity fades; the demo footage does not autoplay.
+- Loading: the console's outcome box reserves the height of its tallest state (268px desktop, 272px mobile) and its cost line reserves two lines, so no verdict, error or `/api/config` answer moves anything on the page. Measured: 0px shift across every state. The screenshot slot and the two demo slots are fixed `aspect-ratio: 16/10` boxes for the same reason.
 - Layer blending: the hero ends in a 160px gradient to the next ground — no hard cuts.
 
 ## Liquid Glass — the material, and where it is allowed
 
 One material, three surfaces. The canonical implementation and its full derivation from
-Apple's documentation live in **`site/index.html` §4a**; the block is copied verbatim into
+Apple's documentation live in **`site/index.html` §4a**; the block is copied into
 `render/arena/public/index.html` and `realtime/dashboard/index.html`, which have to stay
-self-contained single files. Same tokens, same class names, same rules everywhere, so a
-judge moving between the site, the arena and the dashboard sees one product.
+self-contained single files. Same tokens, same class names, same rules everywhere.
 
 **Sources read 2026-09-08** (Apple's human URLs are a JavaScript SPA; the DocC data
 endpoints are what was actually fetched):
@@ -227,10 +279,10 @@ HIG `materials` via `developer.apple.com/tutorials/data/design/human-interface-g
 
 | Apple's rule | What this project does |
 |---|---|
-| "Liquid Glass forms a distinct functional layer for controls and navigation elements … that floats above the content layer" | Glass only on: the site nav, the site's hero console (a control surface, not content), the arena console, the arena outcome banner, the dashboard header, the dashboard's two defense controls. Nothing else. |
-| "Don't use Liquid Glass in the content layer" | `.card`, `.table`, `.stat`, `.verdict`, `.slackcard`, `.tabs__panel`, the console's outcome box, the arena step timeline and terminal output, the dashboard stat tiles, ASR matrix and event feed are all solid. Grep for `class="glass` / count `.glass` in the DOM — there are 2 on the site (nav, console), 2 on the arena, 3 on the dashboard. |
-| "avoid overcrowding or layering Liquid Glass elements on top of each other" | Nothing inside a `.glass` element is also `.glass`. Controls that sit **on** a glass surface use `.glass-inset`: identical optics, zero `backdrop-filter` — the theme segmented control and the Menu button on the bar, the live button on the console. The console's select, toggles and outcome box are opaque `--panel` fills. There is exactly one `backdrop-filter` between the eye and the page at any point on any surface. The mobile nav dropdown is deliberately opaque for the same reason. |
-| Regular variant: "blurs and adjusts the luminosity of background content to maintain legibility … when components have a significant amount of text" | `.glass` — the default and almost everything. |
+| "Liquid Glass forms a distinct functional layer for controls and navigation elements … that floats above the content layer" | Glass only on: the bar on every page (site nav, arena bar, dashboard bar), the site's hero console and the arena's console (control surfaces, not content). Nothing else. |
+| "Don't use Liquid Glass in the content layer" | `.card`, `.panel`, `.table`, `.stats`, `.verdict`, `.slackcard`, `.tabs__panel`, the demo boxes, the console's outcome box, the arena transcript, the dashboard's switches, tables and totals are all solid. Grep for `class="glass` / count `.glass` in the DOM — 2 on the site, 2 on the arena, 1 on the dashboard. (The arena's glass verdict banner and the dashboard's two glass switches were retired in the consistency pass: the banner floated over nothing, and a switch is a content-layer control.) |
+| "avoid overcrowding or layering Liquid Glass elements on top of each other" | Nothing inside a `.glass` element is also `.glass`. Controls that sit **on** a glass surface use `.glass-inset`: identical optics, zero `backdrop-filter` — the theme segmented control and the Menu button on the site's bar, the Live button on both consoles. The consoles' selects, toggles and outcome box are opaque `--panel` fills. There is exactly one `backdrop-filter` between the eye and the page at any point on any surface. The mobile nav dropdown is deliberately opaque for the same reason. |
+| Regular variant: "blurs and adjusts the luminosity of background content to maintain legibility … when components have a significant amount of text" | `.glass` — the default and almost everything. The arena and dashboard bars carry the site's detached-nav tint (`--bar-tint`) from the start, because there is no hero scene under them. |
 | Clear variant: "highly translucent … for components that float above media backgrounds" | `.glass--clear` — one use only: the site nav while the page is at scroll 0, over the hero's parallax scene. Eight pixels of scroll and it thickens into Regular, which is Apple's own scroll edge effect. |
 
 **Tokens** (colour tokens obey the same two-theme rule as the rest of the palette):
@@ -242,10 +294,9 @@ HIG `materials` via `developer.apple.com/tutorials/data/design/human-interface-g
 
 **Classes**: `.glass` `.glass--thin` `.glass--clear` `.glass--refract` `.glass-inset`.
 
-**Concentric radii.** `--glass-r-in: calc(--glass-r - --glass-pad)`. The arena console and
-the site's hero console are radius 22 with 14 of padding, so every control inside them —
-select, toggles, both buttons, the outcome box — is radius 8. The dashboard is 18 with 10, so
-its input and buttons are 8. The site's segmented control is a capsule inside a capsule, which
+**Concentric radii.** `--glass-r-in: calc(--glass-r - --glass-pad)`. Both consoles are radius
+22 with 14 of padding, so every control inside them — select, toggles, both buttons, the
+outcome box — is radius 8. The site's segmented control is a capsule inside a capsule, which
 is concentric at any padding.
 
 **The refraction (the SVG layer).** `backdrop-filter: blur() saturate()` reflects and dims
@@ -260,13 +311,14 @@ It is an **enhancement, never a dependency**. `url()` inside `backdrop-filter` i
 by WebKit and Blink; **Firefox does not honour it**, and `CSS.supports()` only parses, so a
 runtime probe asks the engine what it actually computed for a throwaway node and only then
 sets `data-glass-refract="on"` on `<html>`. The design is finished with blur alone — delete
-the filter and all three surfaces still look right. Only three elements page-wide opt in
-(site nav, arena console, dashboard header), because a displaced backdrop is the most
-expensive thing on any of these pages.
+the filter and all three surfaces still look right. **Only the bar opts in, on each page**
+(site nav, arena bar, dashboard bar); the consoles do not, because a displaced backdrop is the
+most expensive thing on any of these pages and the rule is easier to keep when it is the same
+on every page.
 
 **Motion.** The pointer moves the specular: `--mx`/`--my` are written on the hovered glass
 element only, coalesced into one `requestAnimationFrame`, never bound under Reduce Motion or
-on a coarse pointer. Press collapses the float shadow (200ms in, 180ms back). The nav
+on a coarse pointer. Press collapses the float shadow (200ms in, 180ms back). The site's nav
 thickens Clear → Regular over 280ms `--ease-out`. No glass element carries `will-change`.
 
 **Accessibility, all three surfaces.**
@@ -324,7 +376,57 @@ The drop-in slot for the first beat:
    detected server-side, both ways"), which writes a 1×1 PNG, asserts the marker appears, then
    deletes it and asserts it clears.
 
-Only `.svg`, `.png`, `.ico` and `.webp` are servable from `site/assets/`, by basename only.
+## Adding the demo footage
+
+The second beat of the attack section ("What the agent did") has **two drop-in slots** for
+screen recordings, placed above the harness-log tabs so the reader sees the real thing happen
+and then reads the log of it. Until the files exist the block is `display:none` and beat 2
+reads exactly as before — nothing on the page looks missing.
+
+| Slot | File | Shows |
+|---|---|---|
+| `#demoAttack` | `site/assets/demo-attack.mp4` (or `.webm`, or `.gif`) | guard **off**: the poisoned message is posted, the assistant reads it, the keys leave through the link |
+| `#demoBlocked` | `site/assets/demo-blocked.mp4` (or `.webm`, or `.gif`) | guard **on**: the same message, the same assistant, the send is denied before it leaves |
+| poster (optional) | `site/assets/demo-attack-poster.png` / `demo-blocked-poster.png` | the frame shown before play, and the whole of what a Reduce-Motion reader sees until they press play |
+
+Exact filenames matter: `demo-attack` and `demo-blocked`, lowercase, plus one of the three
+extensions. **Prefer video.** A muted, looping, `playsinline`, `preload="metadata"` `<video>`
+is a fraction of a gif's size at far better quality; `.mp4` (H.264, yuv420p) plays everywhere,
+`.webm` is smaller where it plays. When more than one exists for a slot the server picks
+`.mp4`, then `.webm`, then `.gif`. Recommended dimensions **1600×1000 (16:10)** to match the
+reserved box and the screenshot; 16:9 letterboxes inside it (`object-fit: contain` on
+`--panel-2`) and still cannot shift the layout. Keep the recording to 10–20 s and under a few
+MB; no audio track is needed (the element is muted).
+
+How it behaves:
+
+1. `render/arena/server.mjs` checks for the files on every request for `/` (the cache keys on
+   the set of files found, so a drop-in takes effect on the next request without a restart).
+   It writes the filename it found into `<body data-demo-attack="demo-attack.mp4">` /
+   `data-demo-blocked="…"` and, when present, `data-demo-attack-poster="demo-attack-poster.png"`.
+2. The page's `demo()` script builds the `<video>` (or the `<img>` for a gif) **only** from
+   those attributes, so a site without the files never requests them and never logs a 404.
+   Each slot has a visible caption under the box that says which state it shows.
+3. With motion allowed, a video autoplays muted and looped, and a click on it pauses or
+   resumes; a gif simply plays. If the browser refuses autoplay, a **Play** control appears
+   over the box (a `.btn`, 44px). Under `prefers-reduced-motion: reduce` nothing autoplays: a
+   video shows its poster (or first frame) with the Play control and native controls; a gif —
+   which cannot be paused — shows its poster and is only fetched once Play is pressed.
+4. One slot alone renders full width (up to 820px); both render side by side from 768px up and
+   stack on phones.
+5. On a load error (a static host that sets the attribute but cannot serve the file) the slot
+   removes its own body attribute and disappears, as the screenshot slot does.
+6. The server serves the files by basename only (no separators survive the allowlist regex),
+   with `Accept-Ranges: bytes` and single-range `206` answers — Safari refuses to play a video
+   from a server that cannot answer a range request.
+7. Covered by `tests/arena.test.mjs` ("the demo footage drop-in slots are detected
+   server-side, both ways, and served with ranges"): no marker while absent; a gif is found and
+   named; a `.webm` beside it wins and the poster is named; `200` whole, `206` partial with the
+   right `Content-Range`, `416` out of range, traversal `404`; the marker clears when the files
+   go. The test skips its absent half if real footage is already in place.
+
+Servable from `site/assets/`, by basename only: `.svg`, `.png`, `.ico`, `.webp`, `.mp4`,
+`.webm`, `.gif`.
 
 ## Human Interface Guidelines
 
@@ -334,7 +436,7 @@ files), and how it was verified — plus the pages skipped and why, and the thre
 page deliberately departs from HIG.
 
 ## Logo mark
-`site/assets/mark.svg`: a shield outline in brass (yellow team: the thing that was built) with a vertical conduit inside that stops at a horizontal bar — the flow, interrupted. 32×32 grid, 1.75px strokes, no fill. Replaces the shield emoji in the arena header. Wordmark: "No-Leak-MCP" in Plex Sans 600.
+`site/assets/mark.svg`: a shield outline in brass with a vertical conduit inside that stops at a horizontal bar — the flow, interrupted. 32×32 grid, 1.75px strokes, no fill. The same mark, inline, on all three bars and footers. Wordmark: "No-Leak-MCP" in Plex Sans 600.
 
 ## References consulted (2026-09-08)
 - **awwwards.com/websites/technology** (fetched): dark neutral grounds with one accent; geometric text faces; motion as scroll + microinteractions, "restraint with strategic motion". Taken: single warm accent, hairline discipline, motion only where it explains something.

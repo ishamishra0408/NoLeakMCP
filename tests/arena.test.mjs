@@ -320,6 +320,46 @@ test("the Slack screenshot drop-in slot is detected server-side, both ways", asy
   } finally { await app.close(); }
 });
 
+// The two demo-footage slots follow the screenshot's contract: absent, no marker
+// and no request; present, the server writes the filename it found into
+// body[data-demo-attack] / [data-demo-blocked] (video preferred over a gif, the
+// poster alongside), serves it by basename with byte ranges (Safari needs 206
+// to play a video), and clears the marker again when the file goes. Only the
+// "attack" slot is exercised end to end; "blocked" shares every line of code.
+test("the demo footage drop-in slots are detected server-side, both ways, and served with ranges", async () => {
+  const assets = join(REPO_ROOT_T, "site", "assets");
+  const gif = join(assets, "demo-attack.gif"), webm = join(assets, "demo-attack.webm"), poster = join(assets, "demo-attack-poster.png");
+  if ([gif, webm, poster, join(assets, "demo-attack.mp4")].some(existsSyncT)) { console.log("demo-attack.* already present — skipping the absent half"); return; }
+  const { app, url } = await boot();
+  try {
+    const without = await (await fetch(url + "/")).text();
+    assert.doesNotMatch(without, /<body[^>]*data-demo-attack/, "no marker on <body> while the footage is absent (the CSS selector for it still ships)");
+    assert.match(without, /id="demoAttack"/, "the slot ships, hidden, so dropping the file in cannot shift the layout");
+    assert.equal((await fetch(url + "/assets/demo-attack.gif")).status, 404, "nothing to serve yet");
+    writeFileSyncT(gif, Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64")); // 1x1 gif
+    let html = await (await fetch(url + "/")).text();
+    assert.match(html, /<body[^>]*data-demo-attack="demo-attack\.gif"/, "the gif is found and named");
+    writeFileSyncT(webm, Buffer.alloc(64, 7)); // any bytes: existence is what is tested
+    writeFileSyncT(poster, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"));
+    html = await (await fetch(url + "/")).text();
+    assert.match(html, /<body[^>]*data-demo-attack="demo-attack\.webm" data-demo-attack-poster="demo-attack-poster\.png"/, "video preferred over the gif; poster named");
+    const whole = await fetch(url + "/assets/demo-attack.webm");
+    assert.equal(whole.status, 200); assert.match(whole.headers.get("content-type"), /video\/webm/);
+    assert.equal(whole.headers.get("accept-ranges"), "bytes");
+    const part = await fetch(url + "/assets/demo-attack.webm", { headers: { range: "bytes=8-15" } });
+    assert.equal(part.status, 206); assert.equal(part.headers.get("content-range"), "bytes 8-15/64");
+    assert.equal((await part.arrayBuffer()).byteLength, 8);
+    assert.equal((await fetch(url + "/assets/demo-attack.webm", { headers: { range: "bytes=999-" } })).status, 416);
+    assert.equal((await fetch(url + "/assets/..%2Fdemo-attack.webm")).status, 404, "basename only");
+    unlinkSyncT(webm); unlinkSyncT(gif); unlinkSyncT(poster);
+    html = await (await fetch(url + "/")).text();
+    assert.doesNotMatch(html, /<body[^>]*data-demo-attack/, "marker clears again — the cache keys on the files found, not only mtime");
+  } finally {
+    for (const f of [gif, webm, poster]) { try { unlinkSyncT(f); } catch {} }
+    await app.close();
+  }
+});
+
 test("moving the arena to /arena left the API routes in place", async () => {
   const { app, url } = await boot();
   try {

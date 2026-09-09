@@ -202,32 +202,66 @@ export function createArenaServer(o = {}) {
   // Re-read when the file's mtime changes (one stat per request) so an edit to
   // the site never needs a restart; the arena UI keeps its boot-time cache.
   //
-  // The site has one drop-in slot: if the owner adds site/assets/slack-thread.png
-  // (a redacted screenshot of the planted Slack thread), the page should show it
-  // instead of the hand-built recreation. That is detected HERE, server-side, and
-  // signalled with a `data-slack-shot` attribute on <body>, so a page without the
-  // screenshot never issues a request for it (no 404 in the console). See
-  // site/BRAND.md, "Adding the real Slack screenshot".
-  let siteCache = { mtime: 0, shot: null, body: null };
+  // The site has three drop-in slots, all detected HERE, server-side, and
+  // signalled as attributes on <body>, so a page without a file never issues a
+  // request for it (no 404 in the console):
+  //   site/assets/slack-thread.png            -> <body data-slack-shot="1">
+  //   site/assets/demo-attack.{mp4|webm|gif}  -> data-demo-attack="<filename>"
+  //   site/assets/demo-blocked.{mp4|webm|gif} -> data-demo-blocked="<filename>"
+  //   site/assets/demo-<slot>-poster.png      -> data-demo-<slot>-poster="<filename>"
+  // Video is preferred over a gif when both exist (mp4, then webm, then gif).
+  // The cache keys on the site's mtime AND the set of files found, so dropping
+  // a file in (or out) takes effect on the next request without a restart.
+  // See site/BRAND.md, "Adding the real Slack screenshot" / "Adding the demo footage".
+  const DEMO_EXTS = [".mp4", ".webm", ".gif"];
+  function demoSlots() {
+    const attrs = [];
+    if (existsSync(join(SITE_DIR, "assets", "slack-thread.png"))) attrs.push('data-slack-shot="1"');
+    for (const slot of ["attack", "blocked"]) {
+      const ext = DEMO_EXTS.find((e) => existsSync(join(SITE_DIR, "assets", `demo-${slot}${e}`)));
+      if (!ext) continue;
+      attrs.push(`data-demo-${slot}="demo-${slot}${ext}"`);
+      if (existsSync(join(SITE_DIR, "assets", `demo-${slot}-poster.png`))) attrs.push(`data-demo-${slot}-poster="demo-${slot}-poster.png"`);
+    }
+    return attrs.join(" ");
+  }
+  let siteCache = { mtime: 0, slots: null, body: null };
   function siteHtml() {
     try {
       const f = join(SITE_DIR, "index.html");
       const m = statSync(f).mtimeMs;
-      const shot = existsSync(join(SITE_DIR, "assets", "slack-thread.png"));
-      if (m !== siteCache.mtime || shot !== siteCache.shot) {
+      const slots = demoSlots();
+      if (m !== siteCache.mtime || slots !== siteCache.slots) {
         let s = readFileSync(f, "utf8");
-        if (shot) s = s.replace("<body>", '<body data-slack-shot="1">');
-        siteCache = { mtime: m, shot, body: Buffer.from(s, "utf8") };
+        if (slots) s = s.replace("<body>", "<body " + slots + ">");
+        siteCache = { mtime: m, slots, body: Buffer.from(s, "utf8") };
       }
       return siteCache.body;
     } catch { return null; }
   }
-  const ASSET_TYPES = { ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".webp": "image/webp" };
+  // Servable asset types, by basename only (no separators survive the regex,
+  // so no traversal). The video types are here for the demo slots; a video
+  // needs byte-range answers (Safari refuses to play without them), which the
+  // /assets/ handler provides for every type.
+  const ASSET_TYPES = { ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".webp": "image/webp",
+    ".mp4": "video/mp4", ".webm": "video/webm", ".gif": "image/gif" };
   function siteAsset(name) {
     if (!/^[A-Za-z0-9_.-]+$/.test(name) || name.startsWith(".")) return null;
     const ext = name.slice(name.lastIndexOf("."));
     if (!ASSET_TYPES[ext]) return null;
     try { return { body: readFileSync(join(SITE_DIR, "assets", name)), type: ASSET_TYPES[ext] }; } catch { return null; }
+  }
+  // One range only (`bytes=a-b`, `bytes=a-`, `bytes=-n`); anything else is
+  // answered whole. Returns null when the range is unsatisfiable.
+  function sliceRange(body, header) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(String(header || "").trim());
+    if (!m || (m[1] === "" && m[2] === "")) return { start: 0, end: body.length - 1, partial: false };
+    const size = body.length;
+    let start, end;
+    if (m[1] === "") { const n = Number(m[2]); start = Math.max(0, size - n); end = size - 1; }
+    else { start = Number(m[1]); end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1); }
+    if (!(start <= end) || start >= size) return null;
+    return { start, end, partial: true };
   }
   // The shared live dashboard (realtime/dashboard/index.html) served from the
   // same origin so judges get one public URL for both. It reads Convex directly.
@@ -250,11 +284,15 @@ export function createArenaServer(o = {}) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         return res.end(INDEX_HTML);
       }
-      if (p.startsWith("/assets/") && req.method === "GET") {
+      if (p.startsWith("/assets/") && (req.method === "GET" || req.method === "HEAD")) {
         const a = siteAsset(p.slice("/assets/".length));
         if (!a) return json(res, 404, { error: "not found" });
-        res.writeHead(200, { "content-type": a.type, "cache-control": "public, max-age=86400" });
-        return res.end(a.body);
+        const r = req.headers.range ? sliceRange(a.body, req.headers.range) : { start: 0, end: a.body.length - 1, partial: false };
+        if (!r) { res.writeHead(416, { "content-range": `bytes */${a.body.length}` }); return res.end(); }
+        const headers = { "content-type": a.type, "cache-control": "public, max-age=86400", "accept-ranges": "bytes", "content-length": r.end - r.start + 1 };
+        if (r.partial) headers["content-range"] = `bytes ${r.start}-${r.end}/${a.body.length}`;
+        res.writeHead(r.partial ? 206 : 200, headers);
+        return res.end(req.method === "HEAD" ? undefined : a.body.subarray(r.start, r.end + 1));
       }
       if (p === "/dashboard" || p === "/dashboard/") {
         if (!DASHBOARD_HTML) return json(res, 404, { error: "dashboard not bundled" });
