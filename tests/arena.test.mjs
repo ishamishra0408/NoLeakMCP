@@ -177,17 +177,25 @@ async function boot(over = {}) {
   return { app, url: `http://127.0.0.1:${addr.port}` };
 }
 
-test("rate limiter allows 6 live runs then rejects the 7th from one IP; replay is unaffected", async () => {
+// The cap is read from /api/config rather than hardcoded. It was written as
+// "6 then reject the 7th", so raising the real limit broke the test instead of
+// exercising it — a test that has to be edited whenever the value changes is
+// testing the constant, not the behaviour. What matters is that the (n+1)th run
+// from one address is refused and that a different address is unaffected.
+test("rate limiter refuses the run after the per-IP cap; other IPs and replay are unaffected", async () => {
   const { app, url } = await boot();
   try {
     const hdr = { "content-type": "application/json", "x-forwarded-for": "203.0.113.7" };
-    for (let i = 1; i <= 6; i++) {
+    const cfg = await (await fetch(url + "/api/config")).json();
+    const cap = cfg.rate.perIpMax;
+    assert.ok(cap >= 1, "config reports a per-IP cap");
+    for (let i = 1; i <= cap; i++) {
       const r = await fetch(url + "/api/attack", { method: "POST", headers: hdr, body: JSON.stringify({ model: "nemotron" }) });
-      assert.equal(r.status, 200, `run ${i} should be allowed`);
+      assert.equal(r.status, 200, `run ${i} of ${cap} should be allowed`);
     }
-    const r7 = await fetch(url + "/api/attack", { method: "POST", headers: hdr, body: JSON.stringify({ model: "nemotron" }) });
-    assert.equal(r7.status, 429, "7th run rejected");
-    const body = await r7.json();
+    const over = await fetch(url + "/api/attack", { method: "POST", headers: hdr, body: JSON.stringify({ model: "nemotron" }) });
+    assert.equal(over.status, 429, `run ${cap + 1} rejected`);
+    const body = await over.json();
     assert.match(body.error, /Per-IP limit/);
     // A different IP is independent.
     const other = await fetch(url + "/api/attack", { method: "POST", headers: { ...hdr, "x-forwarded-for": "203.0.113.8" }, body: "{}" });
