@@ -42,17 +42,26 @@ services:
       - key: CONVEX_URL
         sync: false   # paste your Convex deployment URL in the Render dashboard
 
-  # The public, judge-runnable ARENA. Node web service, rootDir = REPO ROOT
-  # (rootDir omitted) so it can import plugins/* directly — the REAL detector
-  # functions, not copies. Zero deps → no buildCommand. Simulated Slack surface +
-  # simulated agent loop, real detectors, real Nebius victim model. Not dsh.
+  # THE PUBLIC SERVICE. This one alone serves everything a judge opens:
+  #   /           the website          /arena      the judge-runnable arena
+  #   /dashboard  the live feed        /c/:id      the attacker drop the verdict checks
+  # rootDir is deliberately omitted so it builds from the REPO ROOT and can import
+  # plugins/* directly — the REAL detector functions, not copies of them.
+  #
+  # buildCommand is explicit and empty ON PURPOSE. Render's node runtime defaults to
+  # `npm install`, and the repo root has no package.json (the arena has zero deps),
+  # so the default would fail the build with ENOENT. Verified: `npm install` in a
+  # directory without a package.json errors. Do not delete this line to "tidy up".
   - type: web
     name: noleak-arena
     runtime: node
     plan: starter
+    buildCommand: "echo 'no build: the arena has zero dependencies'"
     startCommand: node render/arena/server.mjs
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: "20"   # the arena needs 18+; pin it rather than inherit Render's default
       - key: NEBIUS_API_KEY
         sync: false   # victim + scorer inference (paste in the Render dashboard)
       - key: CONVEX_URL
