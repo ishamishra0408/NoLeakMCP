@@ -73,6 +73,11 @@ export function createArenaServer(o = {}) {
   // candidates are ranked by whether they can actually be reached, not by order.
   const ARENA_PUBLIC_URL = pickPublicBase([env.ARENA_PUBLIC_URL, env.RENDER_EXTERNAL_URL]);
   const DATA_DIR = env.DATA_DIR || "";
+  // The demo film lives off-site (YouTube), so the page carries a link, not 4 MB of
+  // video on a starter instance. It is an env var rather than a hardcoded href so the
+  // band simply does not render until a real URL exists — better than shipping a dead
+  // link and remembering to come back. https only; anything else is ignored.
+  const DEMO_VIDEO_URL = /^https:\/\/[^\s"'<>]+$/.test((env.DEMO_VIDEO_URL || "").trim()) ? env.DEMO_VIDEO_URL.trim() : "";
 
   // The drop base is THIS service: GET /c/:id records the receipt the verdict needs.
   const DROP_BASE = ARENA_PUBLIC_URL || `http://127.0.0.1:${PORT}`;
@@ -238,6 +243,7 @@ export function createArenaServer(o = {}) {
   //   site/assets/demo-attack.{mp4|webm|gif}  -> data-demo-attack="<filename>"
   //   site/assets/demo-blocked.{mp4|webm|gif} -> data-demo-blocked="<filename>"
   //   site/assets/demo-<slot>-poster.png      -> data-demo-<slot>-poster="<filename>"
+  //   $DEMO_VIDEO_URL (https)                 -> data-demo-film="<url>"  (the demo film band)
   // Video is preferred over a gif when both exist (mp4, then webm, then gif).
   // The cache keys on the site's mtime AND the set of files found, so dropping
   // a file in (or out) takes effect on the next request without a restart.
@@ -246,6 +252,7 @@ export function createArenaServer(o = {}) {
   function demoSlots() {
     const attrs = [];
     if (existsSync(join(SITE_DIR, "assets", "slack-thread.png"))) attrs.push('data-slack-shot="1"');
+    if (DEMO_VIDEO_URL) attrs.push(`data-demo-film="${DEMO_VIDEO_URL.replace(/"/g, "&quot;")}"`);
     for (const slot of ["attack", "blocked"]) {
       const ext = DEMO_EXTS.find((e) => existsSync(join(SITE_DIR, "assets", `demo-${slot}${e}`)));
       if (!ext) continue;

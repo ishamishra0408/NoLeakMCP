@@ -71,6 +71,11 @@ services:
         value: https://wary-herring-602.convex.cloud   # the same feed the dashboard reads
       - key: NOLEAK_SECRET
         sync: false   # gates the admin reset-limits endpoint
+      - key: DEMO_VIDEO_URL
+        sync: false   # https link to the 100-second demo film. Not a secret, but it does
+                      # not exist until the video is uploaded, and an empty value here is
+                      # better than a hardcoded dead link in the HTML: the film band on the
+                      # site simply does not render until this is set. https only.
       - key: LINKUP_API_KEY
         sync: false   # Deep Research: "where were the keys being sent". A real secret,
                       # unlike CONVEX_URL above, so it is pasted in the dashboard.
