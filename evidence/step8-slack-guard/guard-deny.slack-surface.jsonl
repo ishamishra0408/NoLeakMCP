@@ -1,0 +1,1 @@
+{"ts": "2026-09-10T03:53:00.103Z", "event": "guard/deny", "tool": "bash", "how": "base64", "marker": "canary", "path": "$.command", "sample": "<redacted: the base64 of the decoy keyring>", "agent": "session-42c4ff0e-73b7-4189-be98-38abef3d703c"}
