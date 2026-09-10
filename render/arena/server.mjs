@@ -275,7 +275,11 @@ export function createArenaServer(o = {}) {
         if (DEMO_VIDEO_URL) {
           // safe unescaped: DEMO_VIDEO_URL is validated https with no quotes or angle brackets
           s = s.replace('<section id="film" hidden>', '<section id="film">')
-               .replace('<a class="film reveal" id="filmLink" href="#"', `<a class="film reveal" id="filmLink" href="${DEMO_VIDEO_URL}"`);
+               .replace('<a class="film reveal" id="filmLink" href="#"', `<a class="film reveal" id="filmLink" href="${DEMO_VIDEO_URL}"`)
+               // the hero's second button points AT the video, not at the band that
+               // links to it: one click, not two. Hidden until there is a video.
+               .replace('<a class="btn glass-inset" id="filmBtn" href="#film" hidden>',
+                        `<a class="btn glass-inset" id="filmBtn" href="${DEMO_VIDEO_URL}" rel="noopener">`);
         }
         siteCache = { mtime: m, slots, body: Buffer.from(s, "utf8") };
       }

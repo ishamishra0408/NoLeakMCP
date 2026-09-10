@@ -354,6 +354,7 @@ test("the demo film band is server-gated on DEMO_VIDEO_URL, https only", async (
     const html = await (await fetch(bare.url + "/")).text();
     assert.match(html, /<section id="film" hidden>/, "the band ships hidden with no URL configured");
     assert.match(html, /<a class="film reveal" id="filmLink" href="#"/, "and its link is inert, not dead-pointing at a video");
+    assert.match(html, /id="filmBtn" href="#film" hidden>/, "the hero's second button is hidden too — it used to point at a hidden section and go nowhere");
   } finally { await bare.app.close(); }
 
   const insecure = await boot({ env: { DEMO_VIDEO_URL: "http://evil.example/x" } });
@@ -370,6 +371,9 @@ test("the demo film band is server-gated on DEMO_VIDEO_URL, https only", async (
     assert.ok(html.includes(`<a class="film reveal" id="filmLink" href="${URL_}"`),
       "the URL lands on the anchor itself, not on some earlier copy of that markup");
     assert.doesNotMatch(html, /<a class="film reveal" id="filmLink" href="#"/, "and the placeholder href is gone");
+    assert.ok(html.includes(`id="filmBtn" href="${URL_}" rel="noopener">`),
+      "the hero button points straight at the video, one click rather than two");
+    assert.doesNotMatch(html, /id="filmBtn"[^>]*hidden/, "and it is no longer hidden");
   } finally { await good.app.close(); }
 });
 
