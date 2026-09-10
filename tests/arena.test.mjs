@@ -339,6 +339,40 @@ test("the Slack screenshot drop-in slot is detected server-side, both ways", asy
   } finally { await app.close(); }
 });
 
+// The demo film band is NOT a data-* signal to JS like the slots below: the server
+// unhides the section and writes the href into the HTML it serves, so the band works
+// with JavaScript off. That makes it a string replace against markup, which is exactly
+// the kind of thing that breaks silently — it already did once, when a doc comment
+// above the anchor contained the literal being searched for and swallowed the
+// replacement. Hence: assert the ANCHOR carries the URL, not merely that the URL
+// appears somewhere in the page.
+test("the demo film band is server-gated on DEMO_VIDEO_URL, https only", async () => {
+  const URL_ = "https://youtu.be/aBcD1234xyz";
+
+  const bare = await boot();
+  try {
+    const html = await (await fetch(bare.url + "/")).text();
+    assert.match(html, /<section id="film" hidden>/, "the band ships hidden with no URL configured");
+    assert.match(html, /<a class="film reveal" id="filmLink" href="#"/, "and its link is inert, not dead-pointing at a video");
+  } finally { await bare.app.close(); }
+
+  const insecure = await boot({ env: { DEMO_VIDEO_URL: "http://evil.example/x" } });
+  try {
+    const html = await (await fetch(insecure.url + "/")).text();
+    assert.match(html, /<section id="film" hidden>/, "http:// is refused; the band stays hidden");
+    assert.doesNotMatch(html, /evil\.example/, "and the rejected URL never reaches the page");
+  } finally { await insecure.app.close(); }
+
+  const good = await boot({ env: { DEMO_VIDEO_URL: URL_ } });
+  try {
+    const html = await (await fetch(good.url + "/")).text();
+    assert.match(html, /<section id="film">/, "https reveals the band");
+    assert.ok(html.includes(`<a class="film reveal" id="filmLink" href="${URL_}"`),
+      "the URL lands on the anchor itself, not on some earlier copy of that markup");
+    assert.doesNotMatch(html, /<a class="film reveal" id="filmLink" href="#"/, "and the placeholder href is gone");
+  } finally { await good.app.close(); }
+});
+
 // The two demo-footage slots follow the screenshot's contract: absent, no marker
 // and no request; present, the server writes the filename it found into
 // body[data-demo-attack] / [data-demo-blocked] (video preferred over a gif, the

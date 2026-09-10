@@ -243,7 +243,10 @@ export function createArenaServer(o = {}) {
   //   site/assets/demo-attack.{mp4|webm|gif}  -> data-demo-attack="<filename>"
   //   site/assets/demo-blocked.{mp4|webm|gif} -> data-demo-blocked="<filename>"
   //   site/assets/demo-<slot>-poster.png      -> data-demo-<slot>-poster="<filename>"
-  //   $DEMO_VIDEO_URL (https)                 -> data-demo-film="<url>"  (the demo film band)
+  // The demo film band is different: it is unhidden and its href filled in HERE
+  // rather than signalled to JS, so it works with JavaScript off like the rest of
+  // the page. DEMO_VIDEO_URL is fixed for the life of the process, so the mtime
+  // cache below stays correct without keying on it.
   // Video is preferred over a gif when both exist (mp4, then webm, then gif).
   // The cache keys on the site's mtime AND the set of files found, so dropping
   // a file in (or out) takes effect on the next request without a restart.
@@ -252,7 +255,6 @@ export function createArenaServer(o = {}) {
   function demoSlots() {
     const attrs = [];
     if (existsSync(join(SITE_DIR, "assets", "slack-thread.png"))) attrs.push('data-slack-shot="1"');
-    if (DEMO_VIDEO_URL) attrs.push(`data-demo-film="${DEMO_VIDEO_URL.replace(/"/g, "&quot;")}"`);
     for (const slot of ["attack", "blocked"]) {
       const ext = DEMO_EXTS.find((e) => existsSync(join(SITE_DIR, "assets", `demo-${slot}${e}`)));
       if (!ext) continue;
@@ -270,6 +272,11 @@ export function createArenaServer(o = {}) {
       if (m !== siteCache.mtime || slots !== siteCache.slots) {
         let s = readFileSync(f, "utf8");
         if (slots) s = s.replace("<body>", "<body " + slots + ">");
+        if (DEMO_VIDEO_URL) {
+          // safe unescaped: DEMO_VIDEO_URL is validated https with no quotes or angle brackets
+          s = s.replace('<section id="film" hidden>', '<section id="film">')
+               .replace('<a class="film reveal" id="filmLink" href="#"', `<a class="film reveal" id="filmLink" href="${DEMO_VIDEO_URL}"`);
+        }
         siteCache = { mtime: m, slots, body: Buffer.from(s, "utf8") };
       }
       return siteCache.body;

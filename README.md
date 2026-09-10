@@ -2,6 +2,12 @@
 
 ## [Run the attack yourself →](https://noleak-arena-n14r.onrender.com/arena)
 
+<!-- DEMO VIDEO SLOT. The film is cut and scanned; it is not uploaded yet.
+     When the YouTube URL exists, replace this comment with the line below and
+     set DEMO_VIDEO_URL on the Render service so the site's film band renders too:
+     **[▶ Watch the 100-second demo](<url>)** — or skip it and press the buttons yourself, above.
+     A dead link here is worse than no link, so nothing renders until then. -->
+
 **A teammate posts one Slack message. Your AI assistant reads it, believes it, and hands over your keys — through a link preview, with nothing shown in the channel. No-Leak-MCP stops the message before it leaves.**
 
 **Live:** [site](https://noleak-arena-n14r.onrender.com) · [arena](https://noleak-arena-n14r.onrender.com/arena) · [live feed](https://noleak-arena-n14r.onrender.com/dashboard) — no login, nothing to install
@@ -39,20 +45,32 @@ It decides on the **value**, not the destination, so it does not care which serv
 
 Regenerate with `node eval/run.mjs --n 5` → [`eval/out/results.md`](eval/out/results.md). Captured runs in [`evidence/`](evidence/).
 
-## How each sponsor is load-bearing
+## How this project addresses the judging criteria
+
+Every entry is scored out of 100 on four criteria in order — **Shipping 35, then 25, 25 and 15** — with ties broken by Shipping. Each row below names the thing that proves the claim, not the claim.
+
+| Criterion | What answers it | Check it yourself |
+|---|---|---|
+| **Shipping 35** | Site, arena and live feed are public, no login, nothing to install. The detectors are the shipped plugin code, imported from `plugins/`; the victim is a live model. | [`/arena`](https://noleak-arena-n14r.onrender.com/arena) · `node --test tests/` (27, no network, no keys) |
+| **Usefulness 25** | Attack success 1.00 → 0.00 on the direct arm, both victims, five runs per cell. Blocked/attempts is reported beside it so model refusal is never counted as the guard working. | [`eval/out/results.md`](eval/out/results.md) |
+| **Quality 25** | A leak counts only when the attacker's server receives *and decodes* the secret. Never the model's word for it. What the controls miss is published, not omitted. | Any run's receipt at `/api/drop/<runId>` · [`docs/DETAIL.md`](docs/DETAIL.md) |
+| **Integration 15** | Remove any one sponsor and something visible stops working. Detail in the next table. | below |
+
+**Fun Build** replaces Usefulness and Quality with **Originality 25** and **Fun 25**: pick a victim, flip the switches, watch it get robbed or saved, then check the attacker's own server for the answer.
+
+### The Integration row, per challenge
 
 | Sponsor | What it does here | Verify |
 |---|---|---|
 | **Nebius** | Both ends of the experiment: the victim model that gets attacked, and the second model that scores ingested messages for injection. `render/arena/arena-core.mjs`, `plugins/injection-scorer/` | `/arena` → guard off → **Run live** → *Leaked*, then open the attacker-side receipt. Guard on → *Denied*, receipt empty. |
 | **Convex** | The shared realtime plane: event stream, attack-success cells, and the guard/invariant control switches. `realtime/convex/` | Open `/dashboard` in one browser, run an attack in another. Rows appear without a refresh. |
 | **Linkup** | Answers what the guard cannot: **where were the keys being sent**. It informs; it never gates. `render/arena/linkup.mjs` | Press **Replay** — free, no key needed. After the outcome a live lookup arrives explaining the attacker's collector. [Details](docs/LINKUP.md). |
-| **Fun Build** | Pick a victim, flip the switches, watch it get robbed or saved. | [`/arena`](https://noleak-arena-n14r.onrender.com/arena) |
 
 **Not entering Render Workflows.** Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services. Hosting is not the required integration, so entering it would claim something we did not build.
 
 ## Verified, and what is not
 
-- **26 network-free tests**, all green — `node --test tests/`
+- **27 network-free tests**, all green — `node --test tests/`
 - **A leak counts only when the attacker's server receives and decodes the secret.** Never the model's word for it. Every run's receipt is at `/api/drop/<runId>`.
 - Every credential is a decoy. No real secret exists anywhere in this project.
 - The guard is a **tagged-value tripwire**: an untagged secret, or a transform it cannot decode, still passes. The chain invariant is the tagless answer, and it is opt-in.
@@ -66,7 +84,7 @@ Needs Node 18+ and a Nebius key.
 
 ```bash
 git clone https://github.com/ishamishra0408/NoLeakMCP && cd NoLeakMCP
-node --test tests/                       # 26 tests, no network, no keys
+node --test tests/                       # 27 tests, no network, no keys
 
 export NEBIUS_API_KEY=…                  # victim + scorer
 node render/arena/server.mjs             # site, arena and dashboard on :10000
