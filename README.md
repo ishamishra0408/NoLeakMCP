@@ -47,7 +47,7 @@ Needs Node 18+ and a Nebius key.
 
 ```bash
 git clone https://github.com/ishamishra0408/NoLeakMCP && cd NoLeakMCP
-node --test tests/                       # 31 tests, no network, no keys
+node --test tests/                       # 35 tests, no internet, no keys
 
 export NEBIUS_API_KEY=…                  # victim + scorer
 node render/arena/server.mjs             # site, arena and dashboard on :10000

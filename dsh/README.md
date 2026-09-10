@@ -23,7 +23,7 @@ cp dsh/profiles/headless.cordis.patch.yml ~/.dsh/profiles/headless/cordis.patch.
 
 ## Verify
 ```bash
-node --test tests/                                   # 36 network-free unit tests
+node --test tests/                                   # 35 unit tests, no internet, no keys
 MCPGUARD_ENABLED=1 dsh --profile headless           # boot log shows: mcp-guard armed, injection-scorer armed
 ls ~/.dsh/mcp-guard.log.jsonl ~/.dsh/mcp-guard.scores.jsonl   # audit + verdict logs appear on first deny / first scored read
 ```
