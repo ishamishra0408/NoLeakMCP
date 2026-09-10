@@ -94,6 +94,28 @@ async function pass() {
   return { processed: events.length, offset, next, detections: detections.length };
 }
 
+/**
+ * Keep the public arena from going to sleep.
+ *
+ * Render suspends a web service after idle time and the next visitor pays the cold
+ * start. A judge who opens the dashboard, sees a spinner and leaves has scored the
+ * heaviest criterion on a spinner. Render never suspends a `type: worker`, so one
+ * cheap GET per pass keeps the web service awake.
+ *
+ * Every failure is swallowed. This is a nicety; the detection loop must never die
+ * for it — which is exactly what happened when the call shipped without this
+ * function and crash-looped the worker.
+ */
+const WARM_URL = (process.env.ARENA_WARM_URL || "").trim();
+async function keepArenaWarm() {
+  if (!WARM_URL) return;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try { await fetch(WARM_URL, { signal: ctrl.signal }); }
+  catch { /* a missed ping is not worth a log line */ }
+  finally { clearTimeout(timer); }
+}
+
 async function main() {
   await initConvex();
   console.log(`worker → ${COLLECTOR}  (once=${ONCE})`);
