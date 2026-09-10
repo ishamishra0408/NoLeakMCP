@@ -45,40 +45,6 @@ It decides on the **value**, not the destination, so it does not care which serv
 
 Regenerate with `node eval/run.mjs --n 5` → [`eval/out/results.md`](eval/out/results.md). Captured runs in [`evidence/`](evidence/).
 
-## How this project addresses the judging criteria
-
-Every entry is scored out of 100 on four criteria in order — **Shipping 35, then 25, 25 and 15** — with ties broken by Shipping. Each row below names the thing that proves the claim, not the claim.
-
-| Criterion | What answers it | Check it yourself |
-|---|---|---|
-| **Shipping 35** | Site, arena and live feed are public, no login, nothing to install. The detectors are the shipped plugin code, imported from `plugins/`; the victim is a live model. | [`/arena`](https://noleak-arena-n14r.onrender.com/arena) · `node --test tests/` (31, no network, no keys) |
-| **Usefulness 25** | Attack success 1.00 → 0.00 on the direct arm, both victims, five runs per cell. Blocked/attempts is reported beside it so model refusal is never counted as the guard working. | [`eval/out/results.md`](eval/out/results.md) |
-| **Quality 25** | A leak counts only when the attacker's server receives *and decodes* the secret. Never the model's word for it. What the controls miss is published, not omitted. | Any run's receipt at `/api/drop/<runId>` · [`docs/DETAIL.md`](docs/DETAIL.md) |
-| **Integration 15** | Remove any one sponsor and something visible stops working. Detail in the next table. | below |
-
-**Fun Build** replaces Usefulness and Quality with **Originality 25** and **Fun 25**: pick a victim, flip the switches, watch it get robbed or saved, then check the attacker's own server for the answer.
-
-### The Integration row, per challenge
-
-| Sponsor | What it does here | Verify |
-|---|---|---|
-| **Nebius** | Both ends of the experiment: the victim model that gets attacked, and the second model that scores ingested messages for injection. `render/arena/arena-core.mjs`, `plugins/injection-scorer/` | `/arena` → guard off → **Run live** → *Leaked*, then open the attacker-side receipt. Guard on → *Denied*, receipt empty. |
-| **Convex** | The shared realtime plane: event stream, attack-success cells, and the guard/invariant control switches. `realtime/convex/` | Open `/dashboard` in one browser, run an attack in another. Rows appear without a refresh. |
-| **Linkup** | Answers what the guard cannot: **where were the keys being sent**. It informs; it never gates. `render/arena/linkup.mjs` | Press **Replay** — free, no key needed. After the outcome a live lookup arrives explaining the attacker's collector. [Details](docs/LINKUP.md). |
-
-**Not entering Render Workflows.** Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services. Hosting is not the required integration, so entering it would claim something we did not build.
-
-## Verified, and what is not
-
-- **31 network-free tests**, all green — `node --test tests/`
-- **A leak counts only when the attacker's server receives and decodes the secret.** Never the model's word for it. Every run's receipt is at `/api/drop/<runId>`.
-- Every credential is a decoy. No real secret exists anywhere in this project.
-- The guard is a **tagged-value tripwire**: an untagged secret, or a transform it cannot decode, still passes. The chain invariant is the tagless answer, and it is opt-in.
-- **The Slack-surface block is now captured** — [`evidence/step8-slack-guard/`](evidence/step8-slack-guard/), 2026-09-10, real workspace, real `dsh`, victim on Nebius. The scorer flagged the poisoned thread read at **0.95**; twelve seconds later the guard refused the outbound call at `$.command`. Nothing left the machine. Two things stated rather than smoothed over: the denied tool is `bash`, not `mcp__slack__…`, because the poison instructs an HTTP GET; and the first session read the poison and ignored it, which is what an injected-arm ASR of 0.40 looks like from the inside.
-- **Still owed:** the Beeceptor leak-vs-dark pair. That half needs a guard-OFF run that really posts and really sends the decoy to a third party, and was deliberately not run.
-
-Full scope, the evidence ledger, and what each control misses: [`docs/DETAIL.md`](docs/DETAIL.md).
-
 ## Run locally
 
 Needs Node 18+ and a Nebius key.
@@ -104,6 +70,8 @@ eval/       the attack-success harness and its results
 evidence/   captured runs, each folder stating what it is and is not
 docs/       the long version
 ```
+
+**Not entering Render Workflows.** Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services. Hosting is not the required integration, so entering it would claim something we did not build.
 
 Built during Burning Token 2026 by Isha Mishra and Devansh Pathak, with Claude Code.
 Work predating the event is tagged `pre-event`; everything after `event-start` is the submission ([`CHANGELOG.md`](CHANGELOG.md)). Harness: `@deepseek-ai/dsh` 0.1.1-rc.2, unmodified. MIT.
