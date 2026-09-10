@@ -67,7 +67,5 @@ evidence/   captured runs, each folder stating what it is and is not
 docs/       the long version
 ```
 
-**Not entering Render Workflows.** Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services. Hosting is not the required integration, so entering it would claim something we did not build.
-
 Built during Burning Token 2026 by Isha Mishra and Devansh Pathak, with Claude Code.
 Work predating the event is tagged `pre-event`; everything after `event-start` is the submission ([`CHANGELOG.md`](CHANGELOG.md)). Harness: `@deepseek-ai/dsh` 0.1.1-rc.2, unmodified. MIT.
