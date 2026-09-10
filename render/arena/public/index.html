@@ -499,7 +499,10 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     // failure leaves the replay complete.
     function appendLiveResearch() {
       if (mode !== "replay" || !RESEARCH_URL) return;
-      if (steps.some(function (x) { return x.t === "research"; })) return;
+      // An answerless step (recorded without a Linkup key) must NOT count as
+      // "already researched", or the replay shows "could not look up" forever when
+      // a live answer is one fetch away.
+      if (steps.some(function (x) { return x.t === "research" && x.answer; })) return;
       fetch(RESEARCH_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
         if (!d || !d.answer) return;
         tl.insertAdjacentHTML("beforeend", fmtStep({
