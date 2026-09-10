@@ -454,8 +454,20 @@ export async function runAttack(o) {
       outcome = { kind: "ERROR", text: `The run ran out of time (${Math.round(budgetMs / 1000)} s) before the victim answered. Nothing was sent. Try again, or use Nemotron, which answers faster.` };
       break;
     }
-    const { msg, error } = await llm({ model: mdl.model, messages, tools, timeoutMs: Math.min(mdl.timeoutMs || 60000, left) });
-    if (error) { outcome = { kind: "ERROR", text: `Victim inference failed: ${error}. Nothing was sent — this is the run failing, not a defence holding.` }; break; }
+    const modelCap = mdl.timeoutMs || 60000;
+    const cap = Math.min(modelCap, left);
+    const { msg, error } = await llm({ model: mdl.model, messages, tools, timeoutMs: cap });
+    if (error) {
+      // Distinguish the two aborts. If the budget clamped the cap, the run ran out of
+      // time; if it did not, this model simply did not answer inside its own cap.
+      // Both say "nothing was sent" out loud, because an ERROR beside an empty drop
+      // is exactly what a reader would otherwise mistake for a defence holding.
+      const budgetBound = cap < modelCap;
+      outcome = { kind: "ERROR", text: budgetBound
+        ? `The run hit its ${Math.round(budgetMs / 1000)} s limit waiting for ${mdl.label}. Nothing was sent — this is the run failing, not a defence holding. ${mdl.label} queues on Nebius and can be slow; Nemotron answers in about a second.`
+        : `${mdl.label} did not answer within ${Math.round(modelCap / 1000)} s. Nothing was sent — this is the run failing, not a defence holding. Try again, or replay a recorded run.` };
+      break;
+    }
     if (!msg) { outcome = { kind: "ERROR", text: "Victim returned no message." }; break; }
 
     let calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];

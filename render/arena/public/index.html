@@ -328,7 +328,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
   <div class="page-head">
     <p class="eyebrow">Arena</p>
     <h1>Run the attack yourself, and watch <em>the guard stop it.</em></h1>
-    <p class="lede">Pick the AI model that plays the victim, switch the defences on or off, and run the poisoned Slack message that tells the assistant to send its keys to the attacker. <strong>Replay is instant and free.</strong> A live run uses a real model on Nebius: about 30 s on Nemotron, up to two minutes on Llama, which queues.</p>
+    <p class="lede">Pick the AI model that plays the victim, switch the defences on or off, and run the poisoned Slack message that tells the assistant to send its keys to the attacker. <strong>Replay is instant and free.</strong> A live run uses a real model on Nebius: about 10 s on Nemotron. Llama queues on Nebius and sometimes times out — pick Nemotron for a live run, or replay Llama.</p>
     <p class="scope"><strong>Honest scope.</strong> The Slack workspace and the assistant's loop are simulated here; the detectors are the real code (imported from <code>plugins/</code>) and the victim is a real model. It is a test bench over the same functions the <span class="mono">dsh</span> plugins call, not <span class="mono">dsh</span> itself. Every secret is a planted decoy (a canary); nothing real is at risk. A leak counts only when the attacker's server actually receives and decodes the decoy — never on the model's say-so. Every run streams to the <a href="/dashboard" id="dashLink2">live dashboard</a>.</p>
   </div>
 
@@ -359,7 +359,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       </label>
       <button class="btn btn--primary" type="button" id="replay">Replay a recorded run</button>
       <button class="btn glass-inset" type="button" id="launch">Run live on Nebius</button>
-      <p class="run__cost" id="rate">Replay is instant and free. Live spends about six model calls: ~30 s on Nemotron, up to two minutes on Llama. Six live runs per address per 10 minutes.</p>
+      <p class="run__cost" id="rate">Replay is instant and free. Live spends about six model calls: ~10 s on Nemotron. Llama queues and can time out. Six live runs per address per 10 minutes.</p>
     </div>
   </section>
 
@@ -530,7 +530,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
 
   function setRate(r) {
     if (!r) return;
-    $("rate").textContent = `Replay is instant and free. Live spends about six model calls: ~30 s on Nemotron, up to two minutes on Llama. ${r.perIpUsed} of ${r.perIpMax} live runs used from this address in the last 10 minutes.`;
+    $("rate").textContent = `Replay is instant and free. Live spends about six model calls: ~10 s on Nemotron. Llama queues and can time out. ${r.perIpUsed} of ${r.perIpMax} live runs used from this address in the last 10 minutes.`;
   }
   function liveOff(why) { $("launch").disabled = true; $("launch").textContent = "Live runs unavailable"; $("rate").textContent = "Replay is instant and free. " + why; }
 
@@ -560,7 +560,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     $("launch").disabled = true; $("replay").disabled = true;
     $("result").hidden = false; $("timeline").innerHTML = ""; $("mode").hidden = true; $("foot").textContent = "";
     word(null, "Running live on Nebius…", true);
-    $("otxt").textContent = "The victim model is reading the poisoned thread. About 30 s on Nemotron; Llama queues and can take two minutes.";
+    $("otxt").textContent = "The victim model is reading the poisoned thread. About 10 s on Nemotron; Llama queues and can take minutes.";
     try {
       const r = await fetch("/api/attack", {
         method: "POST", headers: { "content-type": "application/json" },
