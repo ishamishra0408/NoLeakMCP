@@ -151,5 +151,29 @@ export async function researchHost(host, opts = {}, fetchImpl = globalThis.fetch
   }
 }
 
+/**
+ * Reduce whatever a visitor typed to a bare hostname, or null.
+ *
+ * This is a security boundary, not tidiness. The value is interpolated into the
+ * question we send Linkup, so anything that is not hostname-shaped would let a
+ * stranger spend our credits asking Linkup arbitrary questions. Only
+ * [a-z0-9.-] survives, so a prompt cannot ride in on it.
+ *
+ * Accepts what people actually paste: a URL, a host:port, a trailing path,
+ * userinfo. Rejects bare labels ("localhost"), anything over 253 chars, and
+ * every label longer than 63.
+ */
+export function normalizeHost(raw) {
+  let h = String(raw || "").trim().toLowerCase();
+  h = h.replace(/^[a-z][a-z0-9+.-]*:\/\//, "");   // scheme
+  h = h.split(/[\/?#]/)[0];                        // path, query, fragment
+  h = h.replace(/^[^@]*@/, "");                    // userinfo
+  h = h.replace(/:\d+$/, "");                      // port
+  h = h.replace(/\.$/, "");                        // fully-qualified trailing dot
+  if (h.length < 4 || h.length > 253) return null;
+  const label = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+  return new RegExp(`^${label}(?:\\.${label})+$`).test(h) ? h : null;
+}
+
 /** Test seam: drop cached answers. */
 export function _clearResearchCache() { CACHE.clear(); }

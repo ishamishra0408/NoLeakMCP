@@ -36,7 +36,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase } from "./arena-core.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
-import { researchHost, RESEARCH_SUBJECT } from "./linkup.mjs";
+import { researchHost, normalizeHost, RESEARCH_SUBJECT } from "./linkup.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..");
@@ -389,18 +389,30 @@ export function createArenaServer(o = {}) {
       // Capped separately from live runs: it costs money and must not be a tap.
       if (p === "/api/research" && req.method === "GET") {
         const wantFresh = u.searchParams.get("fresh") === "1";
-        if (wantFresh) {
+        // A lookup of anything other than the run's own subject is a call we have
+        // not already paid for, so it counts against the same cap as ?fresh=1.
+        // Conservative on purpose: a repeat within the cache window is served from
+        // memory but still counted, and credits are the thing worth erring on.
+        const askedOther = !!u.searchParams.get("host") && u.searchParams.get("host") !== RESEARCH_SUBJECT;
+        if (wantFresh || askedOther) {
           const ip = clientIp(req);
           const seen = researchHits.get(ip) || [];
           const recent = seen.filter((t) => now() - t < 10 * 60 * 1000);
           if (recent.length >= 5) {
-            return json(res, 429, { error: "Fresh lookups are limited to 5 per address per 10 minutes. Drop ?fresh=1 for the cached answer." });
+            return json(res, 429, { error: "Lookups are limited to 5 per address per 10 minutes." });
           }
           recent.push(now()); researchHits.set(ip, recent);
         }
-        const host = u.searchParams.get("host") || RESEARCH_SUBJECT;
-        if (host !== RESEARCH_SUBJECT) {
-          return json(res, 400, { error: `Only ${RESEARCH_SUBJECT} is looked up here. The attacker's own endpoint stays elided; what matters is what kind of service it was.` });
+        // Any host, not just the run's own. A visitor pasting the address their
+        // assistant was about to reach is the honest use of this: the guard cannot
+        // tell them what is on the other end, and this can. normalizeHost is the
+        // boundary — the value lands inside the question sent to Linkup, so only a
+        // hostname may pass, or a stranger could spend these credits asking it
+        // anything.
+        const raw = u.searchParams.get("host");
+        const host = raw ? normalizeHost(raw) : RESEARCH_SUBJECT;
+        if (!host) {
+          return json(res, 400, { error: "That does not look like a hostname. Paste an address like example.com, or a full URL." });
         }
         const out = await researchHost(host, {}, fetchImpl, { fresh: wantFresh });
         if (out?.error) return json(res, 503, { host, error: out.error, note: "Linkup is optional; the guard never depends on it." });
