@@ -2,7 +2,7 @@
 
 ## [Run the attack yourself →](https://noleak-arena-n14r.onrender.com/arena)
 
-**[▶ Watch the 100-second demo](https://noleak-arena-n14r.onrender.com/#film)** — or skip it and press the buttons yourself, above.
+**[▶ Watch the 76-second demo](https://noleak-arena-n14r.onrender.com/#film)** — or skip it and press the buttons yourself, above.
 
 **A teammate posts one Slack message. Your AI assistant reads it, believes it, and hands over your keys — through a link preview, with nothing shown in the channel. No-Leak-MCP stops the message before it leaves.**
 
