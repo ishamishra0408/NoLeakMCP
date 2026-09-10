@@ -33,10 +33,14 @@ services:
     startCommand: node worker/worker.mjs
     envVars:
       - key: COLLECTOR_URL
-        fromService:
-          type: web
-          name: noleak-collector
-          property: hostport   # host:port on Render's private network; the worker prepends http:// (see worker.mjs)
+        # The PUBLIC https origin, deliberately, not the private-network hostport.
+        # `fromService … property: hostport` resolved to noleak-collector-n14r:10000 and
+        # every pass died with a bare "fetch failed" — no TCP connection at all — while the
+        # same collector answered /health over https in 0.2s. The public origin is proven to
+        # work, every request still carries INGEST_TOKEN, and it is now TLS rather than
+        # plaintext. Cost is a public round trip every INTERVAL_MS, which at this volume is
+        # noise. Revisit only with evidence that the private address actually resolves.
+        value: https://noleak-collector-n14r.onrender.com
       - key: INGEST_TOKEN
         fromService:
           type: web

@@ -41,6 +41,10 @@ function appendEvent(obj) {
 }
 function fileSize(p) { return existsSync(p) ? statSync(p).size : 0; }
 const MAX_BODY = 2 * 1024 * 1024; // 2 MB cap on POST bodies
+// One GET /events serves at most MAX_BATCH events out of at most READ_SPAN bytes. The
+// span is deliberately larger than MAX_BODY so no single logged line can exceed it.
+const MAX_BATCH = Number(process.env.EVENTS_MAX_BATCH || 500);
+const READ_SPAN = 4 * 1024 * 1024;
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let b = "", n = 0;
@@ -97,19 +101,42 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Worker: read the durable log from a byte offset (auth-gated — the log is not public).
+    //
+    // BOUNDED ON PURPOSE. The worker advances its checkpoint only after a whole batch is
+    // durable, so an unbounded read makes a large backlog all-or-nothing: it is re-read
+    // from the same offset on every failure and never checkpoints. Capping the batch lets
+    // the worker WALK a backlog forward instead of choking on it, and keeps one pass to a
+    // predictable number of downstream writes.
+    //
+    // `next` is the byte offset of the first UNCONSUMED byte, so it stays exact under
+    // capping. Only newline-terminated lines are consumed: a final line still being
+    // written is left for the next request rather than half-parsed and skipped past.
     if (p === "/events" && req.method === "GET") {
       if (!authed(req)) return json(res, 401, { error: "unauthorized" });
       const since = Number(u.searchParams.get("since") || 0);
       const size = fileSize(EVENTS);
       let start = since; if (start > size || start < 0) start = 0; // truncated/rotated
       const out = [];
+      let next = start;
       if (start < size) {
+        // READ_SPAN exceeds MAX_BODY, so a single line can never outrun one span and the
+        // "no newline in the whole span" case can only mean an in-flight final write.
+        const span = Math.min(size - start, READ_SPAN);
         const fd = openSync(EVENTS, "r");
-        try { const len = size - start; const b = Buffer.allocUnsafe(len); readSync(fd, b, 0, len, start); // read ONLY the new bytes
-          for (const line of b.toString("utf8").split("\n")) { const s = line.trim(); if (s) { try { out.push(JSON.parse(s)); } catch {} } }
-        } finally { closeSync(fd); }
+        let b;
+        try { b = Buffer.allocUnsafe(span); readSync(fd, b, 0, span, start); } // read ONLY this span
+        finally { closeSync(fd); }
+        let cur = 0;
+        while (out.length < MAX_BATCH) {
+          const nl = b.indexOf(0x0a, cur);
+          if (nl < 0) break; // no complete line left in the span
+          const line = b.toString("utf8", cur, nl).trim();
+          cur = nl + 1; // consumed either way — a junk line must not be re-read forever
+          if (line) { try { out.push(JSON.parse(line)); } catch {} }
+        }
+        next = start + cur;
       }
-      return json(res, 200, { events: out, next: size });
+      return json(res, 200, { events: out, next });
     }
 
     // Worker checkpoint (durable, on this disk) — the recovery anchor.

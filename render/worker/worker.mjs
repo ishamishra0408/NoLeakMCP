@@ -79,7 +79,12 @@ async function pushConvex(e) {
 async function pass() {
   const { offset } = await get("/checkpoint");
   const { events, next } = await get(`/events?since=${offset}`);
-  if (!events.length) return { processed: 0, offset, next };
+  if (!events.length) {
+    // A batch can be empty and still have consumed bytes — blank or unparseable lines.
+    // Leaving the checkpoint behind them would re-read the same bytes on every pass.
+    if (next > offset) await post("/checkpoint", { offset: next });
+    return { processed: 0, offset, next };
+  }
   const detections = [];
   for (const e of events) {
     totals.processed++;
@@ -126,7 +131,13 @@ async function main() {
     try {
       const r = await pass();
       if (r.processed) console.log(`processed ${r.processed} (offset ${r.offset}→${r.next}), detections ${r.detections}; totals`, totals);
-    } catch (err) { console.warn("pass failed (will retry):", err?.message || err); }
+    } catch (err) {
+      // undici reports every network failure as the bare string "fetch failed". The cause
+      // chain is where the useful part lives (ENOTFOUND vs ECONNREFUSED vs a timeout), and
+      // without it a broken COLLECTOR_URL is indistinguishable from a service being down.
+      const why = err?.cause?.code || err?.cause?.message || "";
+      console.warn(`pass failed (will retry): ${err?.message || err}${why ? ` [${why}] → ${COLLECTOR}` : ""}`);
+    }
     if (ONCE) break;
     await keepArenaWarm();
     await new Promise((s) => setTimeout(s, INTERVAL_MS));
