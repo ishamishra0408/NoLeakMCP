@@ -13,3 +13,6 @@ agent-credentials.env
 # Structurizr Lite/local working cache
 .structurizr/
 architecture/**/.structurizr/
+
+# Local dev launch config: points at a developer's own .env path and ports.
+.claude/
