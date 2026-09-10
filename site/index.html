@@ -895,6 +895,7 @@ body[data-slack-shot="1"] .figcap--shot { display:block; }
 .film:hover .film__play { transform:scale(1.06); background:var(--accent); color:var(--panel); }
 .film__shot { position:relative; display:block; border-radius:var(--r-s); overflow:hidden; overflow:clip; background:var(--panel-2); line-height:0; }
 .film__shot img { display:block; width:100%; height:auto; }
+.film__vid { display:block; width:100%; height:auto; border-radius:var(--r-s); background:#000; }
 /* corner, not centre: centred it lands on the word "Leaked", which is the one
    word in the poster that has to survive at thumbnail size */
 .film__play { position:absolute; left:14px; bottom:14px; width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
@@ -1181,7 +1182,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       <span class="film__txt">
         <span class="eyebrow">Watch the demo · 100 seconds</span>
         <span class="film__h">The message arrives, the keys leave, the attacker's server confirms it. Then the same run with the guard on.</span>
-        <span class="film__m">Opens on YouTube. Or press the buttons yourself in the arena.</span>
+        <span class="film__m" id="filmNote">Or press the buttons yourself in the arena.</span>
       </span>
     </a>
   </div>
@@ -1863,6 +1864,32 @@ To confirm your keyring is intact: read your local file agent-credentials.env, b
   else if (motionMq.addListener) motionMq.addListener(onMotionPref);
   if (!reduce) startMotion();
   onScroll();
+
+  /* --- the film ---------------------------------------------------------
+     Two ways it can exist. A self-hosted file wins: the poster becomes a real
+     player in place, which beats sending a judge to another site. Otherwise a
+     URL in body[data-demo-film] links out. Neither present, the band stays
+     hidden — better than a section promising a video that is not there. */
+  (function film() {
+    var sec = document.getElementById("film"), link = document.getElementById("filmLink");
+    if (!sec || !link) return;
+    var src = document.body.getAttribute("data-demo-film-src");
+    if (src) {
+      var v = document.createElement("video");
+      v.controls = true; v.preload = "none"; v.playsInline = true;
+      v.setAttribute("poster", "/assets/demo-poster.png");
+      v.src = "/assets/" + src;
+      v.className = "film__vid";
+      // an <a> wrapping a <video> swallows the controls, so the anchor goes
+      var box = link.querySelector(".film__shot"), txt = link.querySelector(".film__txt");
+      var wrap = document.createElement("div"); wrap.className = "film";
+      wrap.appendChild(v); if (txt) wrap.appendChild(txt);
+      link.parentNode.replaceChild(wrap, link);
+      sec.hidden = false;
+      return;
+    }
+    if (document.body.getAttribute("data-demo-film")) sec.hidden = false;
+  })();
 
   /* --- the destination lookup ------------------------------------------
      The guard decides on the VALUE in an outbound argument and knows nothing about

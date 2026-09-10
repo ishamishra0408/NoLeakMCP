@@ -369,20 +369,20 @@ test("the Slack screenshot drop-in slot is detected server-side, both ways", asy
   try {
     if (!preexisting) {
       const without = await (await fetch(url + "/")).text();
-      assert.match(without, /<body>\n/, "plain <body> while the screenshot is absent");
+      assert.doesNotMatch(without, /data-slack-shot/, "no Slack marker while the screenshot is absent");
       assert.doesNotMatch(without, /<body data-slack-shot/, "no marker while the screenshot is absent");
       assert.match(without, /figcap--recreation/, "the recreation caption ships");
       // 1x1 transparent PNG — enough for existsSync; never rendered by the test.
       writeFileSyncT(shot, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"));
       const withShot = await (await fetch(url + "/")).text();
-      assert.match(withShot, /<body data-slack-shot="1">/, "marker set once the screenshot exists");
+      assert.match(withShot, /<body[^>]*\sdata-slack-shot="1"/, "marker set once the screenshot exists");
       assert.match(withShot, /figcap--shot/, "the screenshot caption ships with it");
       unlinkSyncT(shot);
       const again = await (await fetch(url + "/")).text();
       assert.doesNotMatch(again, /<body data-slack-shot/, "marker clears again — the cache keys on presence, not only mtime");
     } else {
       const withShot = await (await fetch(url + "/")).text();
-      assert.match(withShot, /<body data-slack-shot="1">/);
+      assert.match(withShot, /<body[^>]*\sdata-slack-shot="1"/);
     }
   } finally { await app.close(); }
 });

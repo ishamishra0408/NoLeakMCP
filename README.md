@@ -2,11 +2,7 @@
 
 ## [Run the attack yourself →](https://noleak-arena-n14r.onrender.com/arena)
 
-<!-- DEMO VIDEO SLOT. The film is cut and scanned; it is not uploaded yet.
-     When the YouTube URL exists, replace this comment with the line below and
-     set DEMO_VIDEO_URL on the Render service so the site's film band renders too:
-     **[▶ Watch the 100-second demo](<url>)** — or skip it and press the buttons yourself, above.
-     A dead link here is worse than no link, so nothing renders until then. -->
+**[▶ Watch the 100-second demo](https://noleak-arena-n14r.onrender.com/#film)** — or skip it and press the buttons yourself, above.
 
 **A teammate posts one Slack message. Your AI assistant reads it, believes it, and hands over your keys — through a link preview, with nothing shown in the channel. No-Leak-MCP stops the message before it leaves.**
 

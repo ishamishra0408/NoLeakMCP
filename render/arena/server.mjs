@@ -255,6 +255,12 @@ export function createArenaServer(o = {}) {
   function demoSlots() {
     const attrs = [];
     if (existsSync(join(SITE_DIR, "assets", "slack-thread.png"))) attrs.push('data-slack-shot="1"');
+    // The film, self-hosted. Preferred over $DEMO_VIDEO_URL when the file is
+    // present: an inline player beats a link out, and it does not wait on an
+    // upload to somebody else's site. Served by the /assets/ handler, which
+    // already answers byte ranges — Safari will not play a video without them.
+    const filmExt = DEMO_EXTS.find((e) => existsSync(join(SITE_DIR, "assets", `demo-full${e}`)));
+    if (filmExt) attrs.push(`data-demo-film-src="demo-full${filmExt}"`);
     for (const slot of ["attack", "blocked"]) {
       const ext = DEMO_EXTS.find((e) => existsSync(join(SITE_DIR, "assets", `demo-${slot}${e}`)));
       if (!ext) continue;
