@@ -41,15 +41,27 @@ const PLAN = [
   { id: "llama-invariant", model: "llama", guard: false, invariant: true },
 ];
 
-// MERGE, never rebuild. This script used to write a fresh index from whatever
-// succeeded THIS run, so one failed model dropped working fixtures out of the
-// index and off the site — which happened twice, and Llama fails often enough on
-// Nebius to make it likely. Existing entries are now carried forward and only
-// replaced by a run that actually produced a transcript.
-const existing = existsSync(join(DIR, "index.json"))
-  ? JSON.parse(readFileSync(join(DIR, "index.json"), "utf8"))
-  : [];
-const byId = new Map(existing.map((e) => [e.id, e]));
+// MERGE, never rebuild, and re-read at WRITE time rather than at start.
+//
+// Two bugs, both of which cost this repo real fixtures:
+//
+//   1. It used to write a fresh index from whatever succeeded THIS run and
+//      `continue` past failures, so one slow model dropped working fixtures out
+//      of the index and off the live site.
+//   2. Reading the index once at startup and writing it at the end is a
+//      read-modify-write race. Two overlapping runs — easy to cause, since a
+//      Llama recording takes minutes and the command is one click — both read
+//      the same snapshot and the LAST to finish silently discards the other's
+//      work. That is what removed both Llama entries on 2026-09-09 at 19:43,
+//      four minutes after they were recorded.
+//
+// So the merge happens against the index as it is on disk at the moment of
+// writing, not as it was when this process started.
+const readIndex = () => {
+  try { return existsSync(join(DIR, "index.json")) ? JSON.parse(readFileSync(join(DIR, "index.json"), "utf8")) : []; }
+  catch { return []; }
+};
+const recorded = new Map();   // only what THIS run produced
 
 // `node record-fixtures.mjs llama-guard llama-invariant` records only those and
 // leaves every other fixture untouched.
@@ -66,16 +78,20 @@ for (const c of todo) {
   if (r.outcome === "ERROR") { console.log("   not recording an ERROR — keeping any existing fixture"); continue; }
   const file = `${c.id}.json`;
   writeFileSync(join(DIR, file), JSON.stringify({ steps: r.steps, outcome: r.outcome, outcomeText: r.outcomeText }, null, 2));
-  byId.set(c.id, {
+  recorded.set(c.id, {
     id: c.id, file,
     label: `${MODELS[c.model].label} · guard ${c.guard ? "ON" : "OFF"} · inv ${c.invariant ? "ON" : "OFF"} → ${r.outcome}`,
     model: MODELS[c.model].label, guard: c.guard, invariant: c.invariant, outcome: r.outcome,
     recorded: new Date().toISOString().slice(0, 10),
   });
 }
+// Re-read now, so anything another run wrote while this one was working survives.
+const byId = new Map(readIndex().map((e) => [e.id, e]));
+for (const [id, entry] of recorded) byId.set(id, entry);
 // stable order: the PLAN's order, then anything else that was already there
 const order = new Map(PLAN.map((c, i) => [c.id, i]));
 const index = [...byId.values()].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
 writeFileSync(join(DIR, "index.json"), JSON.stringify(index, null, 2));
-console.log("\nindex now holds", index.length, "fixtures:", index.map((e) => e.id).join(", "));
+console.log("\nrecorded this run:", [...recorded.keys()].join(", ") || "(none)");
+console.log("index now holds", index.length, "fixtures:", index.map((e) => e.id).join(", "));
 drop.close();
