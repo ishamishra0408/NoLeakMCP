@@ -106,6 +106,7 @@ async function main() {
       if (r.processed) console.log(`processed ${r.processed} (offset ${r.offset}→${r.next}), detections ${r.detections}; totals`, totals);
     } catch (err) { console.warn("pass failed (will retry):", err?.message || err); }
     if (ONCE) break;
+    await keepArenaWarm();
     await new Promise((s) => setTimeout(s, INTERVAL_MS));
   } while (running);
   console.log("worker stopped; checkpoint is durable — restart resumes from it.");

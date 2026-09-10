@@ -287,7 +287,8 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
       <ul class="nav__links">
         <li><a class="nav__link" href="/">Site</a></li>
         <li><a class="nav__link" id="arenaLink" href="/arena">Arena</a></li>
-        <li><a class="nav__link is-active" href="/dashboard" aria-current="page">Dashboard</a></li>
+        <li><a class="nav__link is-active" href="/dashboard" aria-current="page">Dashboard</a>
+        <a class="nav__link" href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a></li>
       </ul>
     </div>
   </nav>
@@ -322,11 +323,11 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
   <div class="stats" id="tiles" style="margin-top:0"></div>
 
   <h2 class="eyebrow">Attack success rate</h2>
-  <p class="small dim">How often the decoy secret reached the attacker's server, out of the runs that could be judged, with the guard off and on. "Denied (on)" is how many sends the guard itself stopped.</p>
+  <p class="small dim">How often the decoy secret reached the attacker's server, out of the runs that could be judged, with the guard off and on. <b>blocked</b> is how many sends the guard itself stopped, kept separate from runs where the model refused on its own.</p>
   <div class="table table--matrix"><table id="matrix">
     <caption class="vh">Attack success rate by victim model and attack style, guard off and on.</caption>
-    <thead><tr><th scope="col">Victim</th><th scope="col">Style</th><th scope="col">Guard off</th><th scope="col">Guard on</th><th scope="col">Denied (on)</th><th scope="col">Could not judge</th></tr></thead>
-    <tbody><tr><td colspan="6" class="muted">waiting for data…</td></tr></tbody>
+    <thead><tr><th scope="col">victim</th><th scope="col">style</th><th scope="col">guard off</th><th scope="col">guard on</th><th scope="col">blocked</th></tr></thead>
+    <tbody><tr><td colspan="5" class="muted">waiting for data…</td></tr></tbody>
   </table></div>
 
   <h2 class="eyebrow">Live event feed</h2>
@@ -340,7 +341,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
     <a href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a>
     <a href="/arena">Arena</a>
     <a href="/">Site</a>
-    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026</span>
+    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026 · provenance and the in-event delta in <span class="mono">README.md</span> and <span class="mono">CHANGELOG.md</span><br />Not entering Render Workflows: Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services.</span>
   </div>
 </footer>
 
@@ -433,7 +434,8 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
 
     client.onUpdate(anyApi.metrics.summary, {}, (s) => {
       const t = [["events", s.total], ["sends stopped by the guard", s.denies], ["messages scored", s.verdicts],
-        ["flagged as poisoned", s.injections], ["eval runs", s.trials], ["secrets that got through", s.delivered]];
+        ["flagged as poisoned", s.injections], ["eval runs", s.trials],
+          ["got through with the guard OFF", s.delivered]];
       document.getElementById("tiles").innerHTML = t.map(([l, n]) =>
         `<div class="stat"><span class="stat__n">${n ?? 0}</span><span class="stat__l">${l}</span></div>`).join("");
     }, () => {});
@@ -444,10 +446,9 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
       const body = Object.keys(byMS).sort().map((k) => {
         const [model, style] = k.split("|"); const off = byMS[k].off, on = byMS[k].on;
         const cell = (r, cls) => r ? `<span class="asr ${cls}">${r.asr.toFixed(2)}</span> <span class="muted">(${r.delivered}/${r.evaluable})</span>` : `<span class="asr na">n/a</span>`;
-        const un = (off?.unevaluable || 0) + (on?.unevaluable || 0);
-        return `<tr><td>${esc(model)}</td><td>${esc(style)}</td><td>${cell(off, "off")}</td><td>${cell(on, "on")}</td><td>${on ? on.denied : "-"}</td><td>${un}</td></tr>`;
+        return `<tr><td>${esc(model)}</td><td>${esc(style)}</td><td>${cell(off, "off")}</td><td>${cell(on, "on")}</td><td>${on ? on.denied : "-"}</td></tr>`;
       }).join("");
-      document.querySelector("#matrix tbody").innerHTML = body || `<tr><td colspan="6" class="muted">no trials yet</td></tr>`;
+      document.querySelector("#matrix tbody").innerHTML = body || `<tr><td colspan="5" class="muted">no trials yet</td></tr>`;
     }, () => {});
 
     client.onUpdate(anyApi.metrics.feed, { limit: 60 }, (rows) => {

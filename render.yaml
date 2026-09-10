@@ -44,6 +44,11 @@ services:
           envVarKey: INGEST_TOKEN
       - key: CONVEX_URL
         value: https://wary-herring-602.convex.cloud   # production; public endpoint, not a secret
+      - key: ARENA_WARM_URL
+        # Render suspends a web service after idle time and the next visitor pays the
+        # cold start. This worker is never suspended, so one GET per pass keeps the
+        # public arena awake. Unset = no pings, and nothing else changes.
+        value: https://noleak-arena-n14r.onrender.com/health
 
   # THE PUBLIC SERVICE. This one alone serves everything a judge opens:
   #   /           the website          /arena      the judge-runnable arena
