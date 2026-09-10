@@ -10,7 +10,7 @@
  */
 import http from "node:http";
 import { runAttack, MODELS, inspectDrop, DROP_PATH_RE } from "./arena-core.mjs";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,24 +37,45 @@ const PLAN = [
   { id: "nemotron-guard", model: "nemotron", guard: true, invariant: false },
   { id: "nemotron-invariant", model: "nemotron", guard: false, invariant: true },
   { id: "llama-open", model: "llama", guard: false, invariant: false },
+  { id: "llama-guard", model: "llama", guard: true, invariant: false },
+  { id: "llama-invariant", model: "llama", guard: false, invariant: true },
 ];
 
-const index = [];
-for (const c of PLAN) {
+// MERGE, never rebuild. This script used to write a fresh index from whatever
+// succeeded THIS run, so one failed model dropped working fixtures out of the
+// index and off the site — which happened twice, and Llama fails often enough on
+// Nebius to make it likely. Existing entries are now carried forward and only
+// replaced by a run that actually produced a transcript.
+const existing = existsSync(join(DIR, "index.json"))
+  ? JSON.parse(readFileSync(join(DIR, "index.json"), "utf8"))
+  : [];
+const byId = new Map(existing.map((e) => [e.id, e]));
+
+// `node record-fixtures.mjs llama-guard llama-invariant` records only those and
+// leaves every other fixture untouched.
+const only = process.argv.slice(2);
+const todo = only.length ? PLAN.filter((c) => only.includes(c.id)) : PLAN;
+if (only.length) console.log("recording only:", todo.map((c) => c.id).join(", ") || "(nothing matched)");
+
+for (const c of todo) {
   process.stdout.write(`running ${c.id} … `);
   let r;
   try { r = await runAttack({ modelKey: c.model, guard: c.guard, invariant: c.invariant, apiKey: KEY, dropUrl: DROP_URL }); }
-  catch (e) { console.log("ERROR", e.message); continue; }
+  catch (e) { console.log("ERROR", e.message, "— keeping any existing fixture"); continue; }
   console.log(r.outcome);
+  if (r.outcome === "ERROR") { console.log("   not recording an ERROR — keeping any existing fixture"); continue; }
   const file = `${c.id}.json`;
   writeFileSync(join(DIR, file), JSON.stringify({ steps: r.steps, outcome: r.outcome, outcomeText: r.outcomeText }, null, 2));
-  index.push({
+  byId.set(c.id, {
     id: c.id, file,
     label: `${MODELS[c.model].label} · guard ${c.guard ? "ON" : "OFF"} · inv ${c.invariant ? "ON" : "OFF"} → ${r.outcome}`,
     model: MODELS[c.model].label, guard: c.guard, invariant: c.invariant, outcome: r.outcome,
     recorded: new Date().toISOString().slice(0, 10),
   });
 }
+// stable order: the PLAN's order, then anything else that was already there
+const order = new Map(PLAN.map((c, i) => [c.id, i]));
+const index = [...byId.values()].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
 writeFileSync(join(DIR, "index.json"), JSON.stringify(index, null, 2));
-console.log("\nwrote", index.length, "fixtures to", DIR);
+console.log("\nindex now holds", index.length, "fixtures:", index.map((e) => e.id).join(", "));
 drop.close();

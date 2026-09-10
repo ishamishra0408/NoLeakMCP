@@ -1914,8 +1914,19 @@ To confirm your keyring is intact: read your local file agent-credentials.env, b
       var meta = (mode === "live" ? "Live · " : "Recorded · ") + esc(data.model || "") + " · " + defs(g, i);
       var mismatch = "";
       if (mode === "replay" && sel && (sel.label !== data.model || sel.guard !== g || sel.invariant !== i)) {
+        // Two different situations wear the same note. When the guard and the
+        // invariant are both on there IS no separate recording because the guard
+        // fires first at the same seat — the nearest is the real answer, and
+        // nothing needs running. Otherwise the visitor is genuinely one recording
+        // short, and the advice depends on the model: Nemotron answers live in
+        // about ten seconds, Llama queues on Nebius and often times out, so
+        // sending a judge there would be sending them at the one path that fails.
+        var equivalent = sel.guard && sel.invariant && g && !i;
+        var advice = equivalent ? "" :
+          (sel.key === "llama" ? " Llama queues on Nebius and can time out, so replay is the reliable path here."
+                               : " Run live for the exact one.");
         mismatch = '<p class="run__meta">No recording for ' + esc(sel.label) + ", " + defs(sel.guard, sel.invariant) +
-          " — nearest shown" + (sel.guard && sel.invariant && g && !i ? " (the guard fires first at the same seat)" : "") + ". Run live for the exact one.</p>";
+          " — nearest shown" + (equivalent ? " (the guard fires first at the same seat)" : "") + "." + advice + "</p>";
       }
       var links = ' · <a href="/arena">full run in the arena</a>';
       if (mode === "live" && data.verify) links += ' · <a href="' + esc(data.verify) + '" rel="noopener">check the attacker-side receipt</a>';
