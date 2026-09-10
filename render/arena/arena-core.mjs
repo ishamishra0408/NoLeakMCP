@@ -59,9 +59,22 @@ export const CANARY_NEEDLES = [
 ];
 
 export const MODELS = {
-  nemotron: { model: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B" },
-  llama: { model: "meta-llama/Llama-3.3-70B-Instruct", label: "Llama 3.3 70B" },
+  nemotron: { model: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B", timeoutMs: 60000 },
+  llama: { model: "meta-llama/Llama-3.3-70B-Instruct", label: "Llama 3.3 70B", timeoutMs: 120000 },
 };
+
+/**
+ * Wall-clock budget for one whole run, not one call.
+ *
+ * A per-call cap alone is not enough: eight turns at Llama's 120 s would be a
+ * sixteen-minute HTTP request, and something between the browser and this process
+ * would drop it long before that with no verdict at all. So every victim call is
+ * given the SMALLER of its model's cap and whatever is left of this budget, and a
+ * run that exhausts it ends with a verdict that says so rather than hanging.
+ * A measured guard-on Llama run took 46 s over four calls; this leaves headroom
+ * for a slow one without letting the request become unbounded.
+ */
+export const RUN_BUDGET_MS = 150000;
 
 export const OUTCOMES = ["LEAKED", "DENIED_BY_GUARD", "DENIED_BY_INVARIANT", "EXFIL_ATTEMPTED", "MODEL_DECLINED", "ERROR"];
 
@@ -268,9 +281,11 @@ export function parseInlineToolCalls(content, now = Date.now) {
 
 /** Default LLM: Nebius chat-completions. Returns {msg, finish} | {error}. */
 export function makeNebiusLlm({ apiKey, fetchImpl = globalThis.fetch, timeoutMs = 60000 }) {
-  return async function nebiusChat({ model, messages, tools }) {
+  // `timeoutMs` here is the fallback; the caller passes a per-call value derived
+  // from the model's own cap and the run's remaining budget.
+  return async function nebiusChat({ model, messages, tools, timeoutMs: perCall }) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const timer = setTimeout(() => ctrl.abort(), perCall || timeoutMs);
     try {
       const res = await fetchImpl(NEBIUS_BASE + "chat/completions", {
         method: "POST",
@@ -313,12 +328,13 @@ function safeArgs(raw) {
  * @param {Function} [o.now]        clock (default Date.now)
  * @param {Function} [o.randomId]   run-id entropy (default crypto)
  * @param {number}   [o.maxTurns]   victim turns (default 8)
+ * @param {number}   [o.budgetMs]   wall clock for the whole run (default RUN_BUDGET_MS)
  * @returns {Promise<{outcome,steps,trial,events,transcriptId,...}>}
  */
 export async function runAttack(o) {
   const {
     modelKey, guard, invariant, apiKey, onStep,
-    fetchImpl = globalThis.fetch, now = Date.now, maxTurns = 8,
+    fetchImpl = globalThis.fetch, now = Date.now, maxTurns = 8, budgetMs = RUN_BUDGET_MS,
     randomId = () => randomBytes(4).toString("hex"),
   } = o;
   const dropUrl = normalizeBase(o.dropUrl);
@@ -326,6 +342,7 @@ export async function runAttack(o) {
   if (!mdl) throw new Error(`unknown model ${modelKey}`);
   if (!dropUrl) throw new Error("dropUrl missing");
   const llm = o.llm || (apiKey ? makeNebiusLlm({ apiKey, fetchImpl }) : null);
+  const deadline = now() + budgetMs;
   if (!llm) throw new Error("NEBIUS_API_KEY missing");
 
   // Unguessable run id: a forged GET /c/<id> cannot pre-seed a LEAKED verdict.
@@ -431,8 +448,14 @@ export async function runAttack(o) {
 
   for (let turn = 0; turn < maxTurns && !outcome; turn++) {
     victimCalls++;
-    const { msg, error } = await llm({ model: mdl.model, messages, tools });
-    if (error) { outcome = { kind: "ERROR", text: `Victim inference failed: ${error}` }; break; }
+    // Never more than this model's cap, never more than the run has left.
+    const left = deadline - now();
+    if (left <= 0) {
+      outcome = { kind: "ERROR", text: `The run ran out of time (${Math.round(budgetMs / 1000)} s) before the victim answered. Nothing was sent. Try again, or use Nemotron, which answers faster.` };
+      break;
+    }
+    const { msg, error } = await llm({ model: mdl.model, messages, tools, timeoutMs: Math.min(mdl.timeoutMs || 60000, left) });
+    if (error) { outcome = { kind: "ERROR", text: `Victim inference failed: ${error}. Nothing was sent — this is the run failing, not a defence holding.` }; break; }
     if (!msg) { outcome = { kind: "ERROR", text: "Victim returned no message." }; break; }
 
     let calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
