@@ -2,9 +2,9 @@
 
 > **Not Render Workflows.** This blueprint deploys a Render **web service** (collector + disk) and a
 > **background worker** (detection). The *Workflows · Render* challenge requires the Render
-> Workflows product; porting the worker's `pass()` (checkpoint → fetch → detect → publish → advance)
-> into a Workflow with per-task retries is pending, go/no-go on 2026-09-10. Until then this plane is
-> described as hosting, not Workflows.
+> Workflows product. Porting the worker's `pass()` (checkpoint → fetch → detect → publish → advance)
+> into a Workflow with per-task retries was considered and **withdrawn on 2026-09-10** — it was not
+> built, so it is not claimed. This plane is Render hosting (web + worker), not Workflows.
 
 What must outlive the laptop. Two services + a persistent disk:
 

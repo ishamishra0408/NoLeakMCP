@@ -64,8 +64,12 @@ a different guard. Stated here rather than blurred, because the guard is a value
 does not care which tool carries the value — the row asked for a specific tool name and this
 is not it.
 
-**Still owed:** the Beeceptor leak-vs-dark pair. That half requires a guard-OFF run, which
-really posts and really sends the decoy to a third party, and was deliberately not run.
+**Not captured, by decision:** the Beeceptor leak-vs-dark pair on this surface. It requires a
+guard-OFF session that really posts to the workspace and really sends the decoy to a third-party
+endpoint. The same contrast is already committed where it costs nothing — `evidence/step2-guard/`
+holds the guard-OFF and guard-ON victim transcripts from the headless bash arm, and the live arena
+lets anyone flip the guard and watch the drop go dark. A second copy of that contrast was judged
+not worth a live exfil run.
 
 ## Files
 

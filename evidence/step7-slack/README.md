@@ -15,9 +15,12 @@ The one unflagged thread read (01:31Z) was a control read of a thread without th
 **What this proves:** the Injection-Signal scorer fires on the actual Slack ingest surface, not only on
 the synthetic bash arm (`evidence/step3-scorer/`).
 
-**What this does not prove:** that the guard denied the exfil on the Slack surface. The guard audit log
-(`~/.dsh/mcp-guard.log.jsonl`) was reset before that session's `guard/deny` lines were copied out, and no
-Beeceptor capture was saved. That evidence is owed — see the README's evidence ledger.
+**What this does not prove:** that the guard denied the exfil on the Slack surface. This session's guard
+audit log (`~/.dsh/mcp-guard.log.jsonl`) was reset before its `guard/deny` lines were copied out.
+
+**That gap is now closed elsewhere, not here:** `evidence/step8-slack-guard/` holds a re-captured
+Slack-induced `guard/deny` from 2026-09-10, with the scorer verdicts from the same session. What remains
+uncaptured is the Beeceptor leak-vs-dark pair, which was deliberately not run — see that README.
 
 ## the redacted screenshot — `slack-thread.redacted.png`
 
@@ -28,7 +31,7 @@ the human account **Isha Mishra** at 6:07 PM, spoofing a bot with a literal `[op
 app or bot account.
 
 **This captures the ingress (the poison exists on the wire), not the block.** Nothing in the image is a
-`guard/deny`; that half of the ledger row is still owed.
+`guard/deny`. The block is captured separately, in `evidence/step8-slack-guard/`.
 
 `redact-shot.py` reproduces the image from the source screenshot, which is **not committed** (it carries the
 workspace/channel ids in the URL bar, the DM list, other people's bookmark names, and two recognisable faces).
