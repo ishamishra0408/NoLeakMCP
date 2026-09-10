@@ -6,7 +6,7 @@ if (typeof AbortController === "undefined" || typeof fetch === "undefined") { co
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName, pickPublicBase } from "../render/arena/arena-core.mjs";
-import { _clearResearchCache, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL } from "../render/arena/linkup.mjs";
+import { _clearResearchCache, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL, trimAnswer } from "../render/arena/linkup.mjs";
 import { createArenaServer } from "../render/arena/server.mjs";
 import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT } from "node:fs";
 import { dirname as dirnameT, join } from "node:path";
@@ -394,6 +394,27 @@ test("the Slack screenshot drop-in slot is detected server-side, both ways", asy
 // above the anchor contained the literal being searched for and swallowed the
 // replacement. Hence: assert the ANCHOR carries the URL, not merely that the URL
 // appears somewhere in the page.
+// The shipped panel ended on "…does not store or s". A hard slice at maxAnswer
+// cuts mid-token, which reads as a broken page rather than a trimmed quote.
+test("a long lookup answer is cut at a sentence or a word, never mid-token", () => {
+  const long = "Beeceptor is a developer tool. When you send a request to a free endpoint it is captured. " +
+    "Anyone can claim such an endpoint immediately without proving ownership. The contents are visible to anyone with the dashboard.";
+  const cut = trimAnswer(long, 120);
+  assert.ok(cut.length <= 120, "respects the cap");
+  assert.ok(/[.?!]$/.test(cut), `prefers a whole sentence, got ${JSON.stringify(cut.slice(-30))}`);
+
+  // no sentence break early enough -> fall back to a word boundary with an ellipsis
+  const noStop = "one two three four five six seven eight nine ten eleven twelve";
+  const w = trimAnswer(noStop, 20);
+  assert.ok(w.length <= 21, "cap plus the ellipsis");
+  assert.ok(w.endsWith("…"), "marks that it was trimmed");
+  assert.ok(!/\s…$/.test(w) && noStop.startsWith(w.slice(0, -1)), "cuts on a space, never inside a word");
+
+  assert.equal(trimAnswer("short", 400), "short", "a short answer is untouched and unmarked");
+  assert.equal(trimAnswer(null, 400), "", "a missing answer is empty, not 'null'");
+  assert.ok(!trimAnswer("ends with a comma, and then more", 22).includes(",…"), "a dangling comma goes with the trim");
+});
+
 test("the demo film band is server-gated on DEMO_VIDEO_URL, https only", async () => {
   const URL_ = "https://youtu.be/aBcD1234xyz";
 

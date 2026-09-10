@@ -85,8 +85,23 @@ export function buildQuery(subject) {
 }
 
 /** Trim Linkup's answer to something a timeline step can carry without dominating it. */
+/**
+ * Cut a long answer at a sentence, or failing that a word — never mid-token.
+ * A hard slice ended the shipped panel on "…does not store or s", which reads as
+ * a truncated page rather than a trimmed quote.
+ */
+export function trimAnswer(s, max) {
+  const t = String(s || "").trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "));
+  if (stop >= max * 0.6) return cut.slice(0, stop + 1);      // a whole sentence
+  const sp = cut.lastIndexOf(" ");
+  return (sp > 0 ? cut.slice(0, sp) : cut).replace(/[,;:]$/, "") + "…";
+}
+
 export function shapeResearch(host, data, cfg, at) {
-  const answer = String(data?.answer || "").trim().replace(/\s+/g, " ").slice(0, cfg.maxAnswer);
+  const answer = trimAnswer(data?.answer, cfg.maxAnswer);
   const sources = (Array.isArray(data?.sources) ? data.sources : [])
     .slice(0, cfg.maxSources)
     .map((s) => ({ name: String(s?.name || s?.url || "source").slice(0, 90), url: String(s?.url || "") }))

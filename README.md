@@ -51,7 +51,7 @@ Every entry is scored out of 100 on four criteria in order — **Shipping 35, th
 
 | Criterion | What answers it | Check it yourself |
 |---|---|---|
-| **Shipping 35** | Site, arena and live feed are public, no login, nothing to install. The detectors are the shipped plugin code, imported from `plugins/`; the victim is a live model. | [`/arena`](https://noleak-arena-n14r.onrender.com/arena) · `node --test tests/` (29, no network, no keys) |
+| **Shipping 35** | Site, arena and live feed are public, no login, nothing to install. The detectors are the shipped plugin code, imported from `plugins/`; the victim is a live model. | [`/arena`](https://noleak-arena-n14r.onrender.com/arena) · `node --test tests/` (30, no network, no keys) |
 | **Usefulness 25** | Attack success 1.00 → 0.00 on the direct arm, both victims, five runs per cell. Blocked/attempts is reported beside it so model refusal is never counted as the guard working. | [`eval/out/results.md`](eval/out/results.md) |
 | **Quality 25** | A leak counts only when the attacker's server receives *and decodes* the secret. Never the model's word for it. What the controls miss is published, not omitted. | Any run's receipt at `/api/drop/<runId>` · [`docs/DETAIL.md`](docs/DETAIL.md) |
 | **Integration 15** | Remove any one sponsor and something visible stops working. Detail in the next table. | below |
@@ -70,7 +70,7 @@ Every entry is scored out of 100 on four criteria in order — **Shipping 35, th
 
 ## Verified, and what is not
 
-- **29 network-free tests**, all green — `node --test tests/`
+- **30 network-free tests**, all green — `node --test tests/`
 - **A leak counts only when the attacker's server receives and decodes the secret.** Never the model's word for it. Every run's receipt is at `/api/drop/<runId>`.
 - Every credential is a decoy. No real secret exists anywhere in this project.
 - The guard is a **tagged-value tripwire**: an untagged secret, or a transform it cannot decode, still passes. The chain invariant is the tagless answer, and it is opt-in.
@@ -84,7 +84,7 @@ Needs Node 18+ and a Nebius key.
 
 ```bash
 git clone https://github.com/ishamishra0408/NoLeakMCP && cd NoLeakMCP
-node --test tests/                       # 29 tests, no network, no keys
+node --test tests/                       # 30 tests, no network, no keys
 
 export NEBIUS_API_KEY=…                  # victim + scorer
 node render/arena/server.mjs             # site, arena and dashboard on :10000
