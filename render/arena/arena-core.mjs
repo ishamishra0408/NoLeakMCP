@@ -34,7 +34,6 @@ import { randomBytes } from "node:crypto";
 import { scanArguments } from "../../plugins/mcp-guard/index.js";
 import { harvestTokens, matchOutbound } from "../../plugins/chain-invariant/index.js";
 import { scoreText, isIngestSurface } from "../../plugins/injection-scorer/index.js";
-import { researchHost, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL } from "./linkup.mjs";
 
 // ---------------------------------------------------------------------------
 // Fixed demo world (canary decoys only — mirrors agent-credentials.env)
@@ -353,7 +352,6 @@ export async function runAttack(o) {
   const pendingScores = []; // scorer runs async (off the hot path, as in dsh)
   let scorerCalls = 0;
   let verdict = null;
-  let researched = false; // one destination lookup per run, at most // first verdict (the poisoned thread)
   const step = (s) => { const full = { ...s, at: now() }; steps.push(full); onStep?.(full); return full; };
 
   const guardLabel = guard && invariant ? "guard+inv" : guard ? "guard" : invariant ? "invariant" : "off";
@@ -371,31 +369,10 @@ export async function runAttack(o) {
     baseURL: NEBIUS_BASE, apiKeyEnv: "NEBIUS_API_KEY", model: SCORER_MODEL,
     minChars: 12, maxChars: 6000, timeoutMs: 25000, threshold: 0.5,
   };
-  // --- Linkup: the question the guard cannot answer — who was on the other end ---
-  // Fires only when the scorer says the message IS an injection, so a clean read
-  // spends nothing. INFORMS ONLY: the outcome below is computed without it, and
-  // removing this block changes no verdict.
-  const researchCfg = { timeoutMs: 15000 };
-  function researchDestination() {
-    if (researched) return;
-    researched = true;
-    pendingScores.push((async () => {
-      const out = await researchHost(RESEARCH_SUBJECT, researchCfg, fetchImpl);
-      if (out?.research) {
-        const r = out.research;
-        step({
-          t: "research", host: r.host, answer: r.answer, sources: r.sources,
-          fresh: !!r.fresh, at: r.at,
-          text: `The address in the poisoned message (${ATTACKER_HOST_LABEL}) is an endpoint on ${r.host}. ${r.answer}`,
-        });
-      } else {
-        step({
-          t: "research", host: RESEARCH_SUBJECT, answer: "", sources: [], fresh: false,
-          text: `Could not look up ${RESEARCH_SUBJECT} (${out?.error || "no answer"}). The guard never depended on it.`,
-        });
-      }
-    })());
-  }
+  // Linkup is not called inside a run. The run decides whether the credential left;
+  // the exposure investigation (investigate.mjs, GET /api/investigate) runs AFTER,
+  // from the outcome this run produced — so it can never influence that outcome,
+  // and a slow search never delays a verdict.
 
   function scoreIngest(toolName, text, callId) {
     const dshName = dshToolName(toolName);
@@ -413,8 +390,6 @@ export async function runAttack(o) {
           sample: text.slice(0, 160).replace(/\s+/g, " "),
         });
         step({ t: "scorer", tool: dshName, verdict: v, text: `Injection-scorer verdict on the ingested ${dshName} result: ${v.injection ? "INJECTION" : "clean"} (score ${v.score.toFixed(2)})${v.labels?.length ? " [" + v.labels.join(", ") + "]" : ""}` });
-        // The message is hostile; now say where it wanted the keys to go.
-        if (v.injection) researchDestination();
       } else {
         step({ t: "scorer", tool: dshName, verdict: null, text: `Injection-scorer unavailable for ${dshName} (${scored?.error || "no verdict"}); detection continues on the egress path.` });
       }

@@ -226,6 +226,8 @@ input { background:var(--panel); border:1px solid var(--line-strong); color:var(
 /* the feed: one line per event. The keyword carries the state in words
    (DENY, LEAK, TRIAL, POISONED); the colour seconds it. */
 .table--feed { max-height:420px; overflow:auto; }
+.table--inv table { min-width:760px; }
+.table--inv a { color:var(--dim); text-decoration:underline; text-underline-offset:3px; }
 .table--feed td { padding:10px 16px; white-space:nowrap; }
 .k { display:inline-block; min-width:118px; font-weight:600; }
 .k.deny { color:var(--ok); } .k.leak { color:var(--bad); } .k.verdict { color:var(--amber); } .k.trial { color:var(--accent); }
@@ -330,6 +332,14 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
     <tbody><tr><td colspan="5" class="muted">waiting for data…</td></tr></tbody>
   </table></div>
 
+  <h2 class="eyebrow">Exposure investigations</h2>
+  <p class="small dim">After a run in the arena, or for an address typed on the site, Linkup investigates where the credential was headed: up to three searches, each chosen from what the last one found, stored here and reused by the next investigation. The block never depends on it. The incident verdict does.</p>
+  <div class="table table--inv"><table id="findings">
+    <caption class="vh">Recent exposure investigations, newest first.</caption>
+    <thead><tr><th scope="col">destination</th><th scope="col">run</th><th scope="col">verdict</th><th scope="col">confidence</th><th scope="col">searches</th><th scope="col">sources</th></tr></thead>
+    <tbody><tr><td colspan="6" class="muted">waiting…</td></tr></tbody>
+  </table></div>
+
   <h2 class="eyebrow">Live event feed</h2>
   <div class="table table--feed"><table id="feed"><caption class="vh">The most recent events, newest first.</caption><tbody><tr><td class="muted">waiting…</td></tr></tbody></table></div>
 </div>
@@ -341,7 +351,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
     <a href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a>
     <a href="/arena" data-home="/arena">Arena</a>
     <a href="/" data-home="/">Site</a>
-    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026 · provenance and the in-event delta in <span class="mono">README.md</span> and <span class="mono">CHANGELOG.md</span><br />Not entering Render Workflows: Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services.</span>
+    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026 · provenance and the in-event delta in <span class="mono">README.md</span> and <span class="mono">CHANGELOG.md</span></span>
   </div>
 </footer>
 
@@ -463,6 +473,22 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
       }).join("");
       document.querySelector("#matrix tbody").innerHTML = body || `<tr><td colspan="5" class="muted">no trials yet</td></tr>`;
     }, () => {});
+
+    const RUN = (o) => !o ? "what-if lookup" : o === "LEAKED" ? "leaked" : o.indexOf("DENIED") === 0 ? "blocked" : o.toLowerCase().replace(/_/g, " ");
+    const SEV = { critical: "leak", high: "leak", medium: "verdict", low: "deny" };
+    const STEP = { recall: "memory", identify: "identify", exposure: "who can read it", abuse: "abuse reports", gap: "who could read it", corroborate: "independent check" };
+    const findingsBody = document.querySelector("#findings tbody");
+    client.onUpdate(anyApi.metrics.findings, { limit: 12 }, (rows) => {
+      const link = (x) => /^https?:\/\//i.test(x.url || "") ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name.slice(0, 32))}</a>` : "";
+      findingsBody.innerHTML = rows.map((f) => `<tr>
+        <td>${esc(f.host)}<br><span class="muted">${esc(new Date(f.createdAt).toLocaleTimeString())}</span></td>
+        <td>${esc(RUN(f.outcome))}</td>
+        <td><span class="k ${SEV[f.severity] || "verdict"}">${esc(f.verdict)}</span><br><span class="muted">${esc(f.action)}</span></td>
+        <td>${esc(f.confidence)}</td>
+        <td>${f.steps.map((st) => esc(STEP[st.kind] || st.kind)).join(" → ")}<br><span class="muted">${f.calls} Linkup call${f.calls === 1 ? "" : "s"}${f.reused ? " · identity from memory" : ""}</span></td>
+        <td>${f.sources.slice(0, 2).map(link).filter(Boolean).join("<br>") || '<span class="muted">none</span>'}</td>
+      </tr>`).join("") || `<tr><td colspan="6" class="muted">no investigations yet</td></tr>`;
+    }, () => { findingsBody.innerHTML = `<tr><td colspan="6" class="muted">investigations are not deployed on this Convex deployment yet</td></tr>`; });
 
     client.onUpdate(anyApi.metrics.feed, { limit: 60 }, (rows) => {
       const srcPill = (e) => e.source ? ` <span class="src ${esc(e.source)}">${esc(e.source)}</span>` : "";

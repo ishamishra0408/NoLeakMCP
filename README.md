@@ -9,6 +9,8 @@
 **Live:** [site](https://noleak-arena-n14r.onrender.com) · [arena](https://noleak-arena-n14r.onrender.com/arena) · [live feed](https://wary-herring-602.convex.site) — no login, nothing to install
 
 **The live feed runs on Convex end to end.** The page is served by [Convex Static Hosting](https://github.com/get-convex/static-hosting) at `wary-herring-602.convex.site`, from the same deployment that stores every event and pushes it to every viewer. Open it in two windows and flip the guard in one: the other updates without a refresh, and a `dsh` session following the toggle picks it up within about two seconds.
+
+**Linkup investigates where it was going.** After a run in the arena, or for any address you type in, up to three Linkup searches, each chosen by code from what the last one found, work out who can read the credential at its destination, check that against independent sites, and decide the incident verdict: *EXPOSED, rotate now* versus *CONTAINED*. The block never depends on Linkup; how bad the incident is does. Findings are stored in Convex and reused by the next investigation. [How to verify it](docs/LINKUP.md).
 **Result:** attack success **1.00 → 0.00**, guard off → on · 5 of 5 attempts blocked · two victim models on Nebius
 
 ![The poisoned Slack thread beside the standup recap that never mentions it](site/assets/slack-thread.png)
@@ -49,7 +51,7 @@ Needs Node 18+ and a Nebius key.
 
 ```bash
 git clone https://github.com/ishamishra0408/NoLeakMCP && cd NoLeakMCP
-node --test tests/                       # 39 tests, no internet, no keys
+node --test tests/                       # 50 tests, no internet, no keys
 
 export NEBIUS_API_KEY=…                  # victim + scorer
 node render/arena/server.mjs             # site, arena and dashboard on :10000

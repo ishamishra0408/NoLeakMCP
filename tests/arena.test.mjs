@@ -6,7 +6,7 @@ if (typeof AbortController === "undefined" || typeof fetch === "undefined") { co
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName, pickPublicBase } from "../render/arena/arena-core.mjs";
-import { _clearResearchCache, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL, trimAnswer, normalizeHost } from "../render/arena/linkup.mjs";
+import { RESEARCH_SUBJECT, trimAnswer, normalizeHost } from "../render/arena/linkup.mjs";
 import { createArenaServer, DEFAULT_DASHBOARD_URL } from "../render/arena/server.mjs";
 import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT, readFileSync as readFileSyncT } from "node:fs";
 import { dirname as dirnameT, join } from "node:path";
@@ -227,6 +227,7 @@ async function boot(over = {}) {
     env: { NEBIUS_API_KEY: "test", CONVEX_URL: "", COLLECTOR_URL: "", PORT: "0", ...over.env },
     runAttack: over.runAttack || (async () => fakeResult()),
     fetchImpl: async () => ({ ok: true, status: 200, async json() { return {}; }, async text() { return ""; } }),
+    ...(over.linkupSearch ? { linkupSearch: over.linkupSearch } : {}),
   });
   const addr = await app.listen(0);
   return { app, url: `http://127.0.0.1:${addr.port}` };
@@ -605,48 +606,92 @@ test("the public base is chosen by reachability, not by order", () => {
   assert.equal(pickPublicBase([]), "");
 });
 
-// --- Linkup: informs, never gates -------------------------------------------
-// The guard blocks on the value inside the outbound argument. These assert that
-// the destination lookup rides alongside that decision without touching it, and
-// that a missing key or a clean message costs nothing.
+// --- Linkup: never decides the block; decides how bad the incident is ---------
+// The investigation runs AFTER a run, from the outcome the server recorded. These
+// pin both halves: Linkup cannot reach inside a run, and the route resolves what it
+// investigates on the server, never from what the client claims.
 
-test("a flagged message triggers exactly one destination lookup, and it does not change the outcome", async () => {
-  _clearResearchCache();
+test("Linkup is never called inside a run, so it cannot change an outcome", async () => {
   process.env.LINKUP_API_KEY = "test-linkup-key";
-  const f = makeFakeFetch(DROP);
-  const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard: true, invariant: false }));
-  // unchanged verdict: the guard still decides
-  assert.equal(r.outcome, "DENIED_BY_GUARD");
-  assert.equal(f.dropCalls().length, 0);
-  const research = r.steps.filter((s) => s.t === "research");
-  assert.equal(research.length, 1, "one research step");
-  assert.equal(research[0].host, RESEARCH_SUBJECT, "the service, not the run's own drop and not the elided endpoint");
-  assert.ok(research[0].text.includes(ATTACKER_HOST_LABEL), "prose uses the same elision the site uses");
-  assert.match(research[0].text, /request-capture/i);
-  assert.equal(f.linkupCalls().length, 1, "exactly one Linkup POST");
-  delete process.env.LINKUP_API_KEY;
+  try {
+    for (const [guard, want] of [[true, "DENIED_BY_GUARD"], [false, "LEAKED"]]) {
+      const f = makeFakeFetch(DROP);
+      const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard, invariant: false }));
+      assert.equal(r.outcome, want);
+      assert.equal(f.linkupCalls().length, 0, "no Linkup call during a run");
+      assert.equal(r.steps.filter((s) => s.t === "research").length, 0);
+    }
+  } finally { delete process.env.LINKUP_API_KEY; }
 });
 
-test("a clean message costs no Linkup call", async () => {
-  _clearResearchCache();
-  process.env.LINKUP_API_KEY = "test-linkup-key";
-  const f = makeFakeFetch(DROP, { scorerVerdict: { injection: false, score: 0, labels: [], reason: "benign" } });
-  const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard: true, invariant: false }));
-  assert.equal(f.linkupCalls().length, 0, "no lookup when nothing was flagged");
-  assert.equal(r.steps.filter((s) => s.t === "research").length, 0);
-  delete process.env.LINKUP_API_KEY;
+/** A fake Linkup that classifies every host as a public capture service. */
+function fakeLinkup() {
+  const calls = [];
+  const fn = async (spec) => {
+    calls.push(spec);
+    if (spec.step === "identify") return { data: { service_type: "request_capture", operator: "Svc", summary: "Captures requests." }, sources: [{ name: "a", url: "https://svc.example/a" }] };
+    return { data: { publicly_readable: true, evidence: "Anyone with the link can view requests." }, sources: [{ name: "b", url: `https://${spec.step === "corroborate" ? "other.example" : "svc.example"}/b` }] };
+  };
+  fn.calls = calls;
+  return fn;
+}
+
+test("/api/investigate resolves the subject server-side and meters real work", async () => {
+  const linkup = fakeLinkup();
+  let nextOutcome = "LEAKED";
+  const { app, url } = await boot({ linkupSearch: linkup, runAttack: async () => fakeResult(nextOutcome) });
+  try {
+    const cfg = await (await fetch(url + "/api/config")).json();
+    assert.equal(cfg.research, "/api/investigate");
+
+    assert.equal((await fetch(url + "/api/investigate?host=" + encodeURIComponent("not a host"))).status, 400);
+    assert.equal((await fetch(url + "/api/investigate?run=never-ran")).status, 404);
+
+    // a real run: the outcome comes from what this server recorded, and a client
+    // claiming a different outcome is ignored
+    const run = await (await fetch(url + "/api/attack", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: "nemotron", guard: false, invariant: false }) })).json();
+    const inv = await (await fetch(url + `/api/investigate?run=${run.transcriptId}&outcome=DENIED_BY_GUARD`)).json();
+    assert.equal(inv.outcome, "LEAKED");
+    assert.equal(inv.host, RESEARCH_SUBJECT);
+    assert.equal(inv.verdict, "EXPOSED");
+    assert.match(inv.note, /never decides the block/);
+    const spent = linkup.calls.length;
+    assert.ok(spent >= 2 && spent <= 3);
+
+    // the same host+outcome again is served from memory and costs nothing
+    const again = await (await fetch(url + `/api/investigate?run=${run.transcriptId}`)).json();
+    assert.equal(again.cached, true);
+    assert.equal(linkup.calls.length, spent);
+
+    // a recording: outcome from the recording
+    const fx = cfg.fixtures.find((f) => f.outcome === "DENIED_BY_GUARD");
+    if (fx) {
+      const fi = await (await fetch(url + `/api/investigate?fixture=${fx.id}`)).json();
+      assert.equal(fi.outcome, "DENIED_BY_GUARD");
+      assert.equal(fi.verdict, "CONTAINED");
+      assert.equal(fi.steps[0].kind, "recall", "the second investigation of this host reuses the stored identity");
+    }
+
+    // the old path still answers, as the same investigation
+    const alias = await fetch(url + "/api/research?host=example.com");
+    assert.equal(alias.status, 200);
+    assert.ok((await alias.json()).verdict);
+
+    // per-address metering: only real investigations count, cached ones do not
+    let status = 200;
+    for (let i = 0; i < 8 && status === 200; i++) status = (await fetch(url + `/api/investigate?host=h${i}.example`)).status;
+    assert.equal(status, 429);
+  } finally { await app.close(); }
 });
 
-test("no LINKUP_API_KEY: the run is unaffected and the step says why", async () => {
-  _clearResearchCache();
-  delete process.env.LINKUP_API_KEY;
-  const f = makeFakeFetch(DROP);
-  const r = await runAttack(base(makeFakeLlm(exfilPlan()), f, { guard: false, invariant: false }));
-  assert.equal(r.outcome, "LEAKED", "the run still completes and still leaks");
-  assert.equal(f.linkupCalls().length, 0);
-  const research = r.steps.filter((s) => s.t === "research");
-  assert.equal(research.length, 1);
-  assert.match(research[0].text, /Could not check|LINKUP_API_KEY/i);
+test("/api/investigate without Linkup says so and changes nothing else", async () => {
+  const { app, url } = await boot();
+  try {
+    const r = await fetch(url + "/api/investigate?host=example.com");
+    assert.equal(r.status, 503);
+    assert.match((await r.json()).note, /never depends on Linkup/);
+    assert.equal((await (await fetch(url + "/api/config")).json()).research, null);
+  } finally { await app.close(); }
 });
 
 // The attacker's endpoint is painted out of the screenshot, the site captions and
@@ -656,7 +701,7 @@ test("no LINKUP_API_KEY: the run is unaffected and the step says why", async () 
 test("the elided attacker endpoint is never republished", async () => {
   const { readFileSync: rf } = await import("node:fs");
   const files = [
-    "render/arena/linkup.mjs", "render/arena/arena-core.mjs",
+    "render/arena/linkup.mjs", "render/arena/investigate.mjs", "render/arena/arena-core.mjs",
     "render/arena/server.mjs", "render/arena/public/index.html", "site/index.html",
   ];
   for (const f of files) {

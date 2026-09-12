@@ -59,4 +59,40 @@ export default defineSchema({
     enabled: v.boolean(),
     updatedAt: v.number(),
   }).index("by_name", ["name"]),
+
+  // Exposure investigations (render/arena/investigate.mjs): where a credential was
+  // headed, who can read it there, how sure we are, what to do. Written by the arena
+  // after each run; read back as MEMORY (a fresh, sourced identity skips a search)
+  // and by the dashboard. Arrays are capped at write time.
+  findings: defineTable({
+    host: v.string(),
+    outcome: v.optional(v.string()),        // run outcome; absent = "what if" lookup
+    runId: v.optional(v.string()),
+    serviceType: v.string(),
+    operator: v.optional(v.string()),
+    identitySummary: v.string(),
+    identityConfidence: v.string(),         // "sourced" | "unverified"
+    claimKind: v.string(),                  // "exposure" | "abuse" | "gap"
+    verdict: v.string(),
+    severity: v.string(),
+    confidence: v.string(),                 // "confirmed" | "likely" | "unverified"
+    action: v.string(),
+    couldNotConfirm: v.array(v.string()),   // <= 6
+    steps: v.array(v.object({               // <= 4
+      kind: v.string(),
+      query: v.string(),
+      why: v.string(),
+      result: v.string(),
+      sourceCount: v.number(),
+      error: v.optional(v.string()),
+    })),
+    sources: v.array(v.object({ name: v.string(), url: v.string() })), // <= 6
+    calls: v.number(),
+    reused: v.boolean(),
+    key: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_host_and_createdAt", ["host", "createdAt"])
+    .index("by_key", ["key"]),
 });

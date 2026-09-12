@@ -22,6 +22,36 @@ export const cells = query({
   },
 });
 
+/** Recent exposure investigations for the dashboard (newest first). */
+export const findings = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    return await ctx.db.query("findings").withIndex("by_createdAt").order("desc").take(Math.min(limit ?? 12, 50));
+  },
+});
+
+/**
+ * The investigation's memory: the newest finding for a host whose identity was
+ * sourced. Freshness is judged by the caller (no Date.now() in a query), so this
+ * only returns what is stored.
+ */
+export const latestFindingForHost = query({
+  args: { host: v.string() },
+  handler: async (ctx, { host }) => {
+    const recent = await ctx.db
+      .query("findings")
+      .withIndex("by_host_and_createdAt", (q) => q.eq("host", host))
+      .order("desc")
+      .take(5);
+    const f = recent.find((r) => r.identityConfidence !== "unverified");
+    if (!f) return null;
+    return {
+      serviceType: f.serviceType, operator: f.operator ?? null, identitySummary: f.identitySummary,
+      identityConfidence: f.identityConfidence, createdAt: f.createdAt,
+    };
+  },
+});
+
 /** Rollup counters for the header tiles. */
 export const summary = query({
   args: {},

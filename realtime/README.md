@@ -16,6 +16,7 @@ in the same instant.
 | `dashboard/index.html` | subscribes to the queries; renders the matrix + feed |
 | `convex/convex.config.ts` | mounts **Convex Static Hosting**, which serves `dashboard/` at `https://<deployment>.convex.site` |
 | `convex/http.ts` | `/guard` and `/invariant` (polled by the dsh plugins), then the static catch-all |
+| `findings` table · `ingest:ingestFinding` · `metrics:findings`, `metrics:latestFindingForHost` | Linkup exposure investigations from the arena: stored, shown on the dashboard, and read back as memory by the next investigation |
 
 ## Setup
 

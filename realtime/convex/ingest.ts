@@ -94,11 +94,53 @@ export const ingestTrial = mutation({
   },
 });
 
+/**
+ * Store one exposure investigation. Strict validators (not v.any): this row is read
+ * back as memory by the next investigation, so its shape is a contract. Idempotent
+ * by `key`, like the other ingest mutations.
+ */
+export const ingestFinding = mutation({
+  args: {
+    host: v.string(),
+    outcome: v.optional(v.string()),
+    runId: v.optional(v.string()),
+    serviceType: v.string(),
+    operator: v.optional(v.string()),
+    identitySummary: v.string(),
+    identityConfidence: v.string(),
+    claimKind: v.string(),
+    verdict: v.string(),
+    severity: v.string(),
+    confidence: v.string(),
+    action: v.string(),
+    couldNotConfirm: v.array(v.string()),
+    steps: v.array(v.object({
+      kind: v.string(), query: v.string(), why: v.string(), result: v.string(),
+      sourceCount: v.number(), error: v.optional(v.string()),
+    })),
+    sources: v.array(v.object({ name: v.string(), url: v.string() })),
+    calls: v.number(),
+    reused: v.boolean(),
+    key: v.string(),
+    createdAt: v.number(),
+  },
+  handler: async (ctx, a) => {
+    const dup = await ctx.db.query("findings").withIndex("by_key", (q) => q.eq("key", a.key)).first();
+    if (dup) return;
+    await ctx.db.insert("findings", {
+      ...a,
+      couldNotConfirm: a.couldNotConfirm.slice(0, 6),
+      steps: a.steps.slice(0, 4),
+      sources: a.sources.slice(0, 6),
+    });
+  },
+});
+
 /** Reset the projection (it is rebuildable from the log). Handy for demos. */
 export const reset = mutation({
   args: {},
   handler: async (ctx) => {
-    for (const t of ["events", "asrCells"]) {
+    for (const t of ["events", "asrCells", "findings"] as const) {
       const rows = await ctx.db.query(t).collect();
       for (const r of rows) await ctx.db.delete(r._id);
     }

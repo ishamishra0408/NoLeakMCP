@@ -250,6 +250,14 @@ p { margin:0 0 1em; max-width:var(--measure); }
 .step.detector.deny::before { border-color:var(--ok); background:var(--ok); }
 .step.detector.leak::before { border-color:var(--bad); background:var(--bad); }
 .step.research::before { border-color:var(--line-strong); background:var(--panel2); }
+.step.inv::before { border-color:var(--brass); }
+.step.inv .q { color:var(--ink); font-family:var(--mono); font-size:var(--fs-xs); }
+.step.inv-verdict { border-left-color:transparent; }
+.step.inv-verdict::before { border-color:var(--brass); background:var(--brass); }
+.inv-v { font:600 var(--fs-md, 1.05rem)/1.3 var(--sans); letter-spacing:.02em; }
+.inv-verdict[data-sev="critical"] .inv-v, .inv-verdict[data-sev="high"] .inv-v { color:var(--bad); }
+.inv-verdict[data-sev="medium"] .inv-v { color:var(--amber); }
+.inv-verdict[data-sev="low"] .inv-v { color:var(--ok); }
 .step.outcome::before { border-color:var(--ink); background:var(--ink); }
 .step .head { font:600 var(--fs-xs)/1.4 var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--dim); }
 /* transcript lines wrap at the reading measure, like every paragraph */
@@ -385,7 +393,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     <a href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a>
     <a href="https://wary-herring-602.convex.site">Dashboard</a>
     <a href="/">Site</a>
-    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026 · provenance and the in-event delta in <span class="mono">README.md</span> and <span class="mono">CHANGELOG.md</span><br />Not entering Render Workflows: Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services.</span>
+    <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026 · provenance and the in-event delta in <span class="mono">README.md</span> and <span class="mono">CHANGELOG.md</span></span>
   </div>
 </footer>
 
@@ -393,7 +401,8 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
 (function () {
   const $ = (id) => document.getElementById(id);
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let RESEARCH_URL = null; // "/api/research" when LINKUP_API_KEY is set on the deployment, else null
+  let RESEARCH_URL = null; // "/api/investigate" when Linkup is configured on the deployment, else null
+  let DASHBOARD_URL = null;
 
   /* Liquid Glass runtime — the same two halves as the site (§4a there). */
   (function initGlass() {
@@ -443,6 +452,45 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     $("verdictWord").innerHTML = (busy ? '<span class="spin" aria-hidden="true"></span>' : (ICO[tone] || "")) + '<span id="badge">' + esc(text) + "</span>";
   }
 
+  const INV_HEAD = {
+    recall: "remembered · a stored finding, no search spent",
+    identify: "what is it?", exposure: "who can read what is sent to it?",
+    abuse: "is it reported as malicious?", gap: "who could read data sent to it?",
+    corroborate: "independent check · the same question, that site excluded",
+  };
+  const safeUrl = (u) => (/^https?:\/\//i.test(u || "") ? u : null);
+  function fmtInvestigation(f, replayed) {
+    let n = 0;
+    const steps = (f.steps || []).map(function (st) {
+      const label = st.q ? "linkup search " + (++n) + " · " + (INV_HEAD[st.kind] || st.kind) : "linkup · " + (INV_HEAD[st.kind] || st.kind);
+      const filt = st.filter && st.filter.includeDomains ? " — only " + esc(st.filter.includeDomains.join(", "))
+        : st.filter && st.filter.excludeDomains ? " — excluding " + esc(st.filter.excludeDomains.join(", ")) : "";
+      const seenSite = {};
+      const srcs = (st.sources || []).map(function (x) {
+        const u = safeUrl(x.url), k = x.site || x.name;
+        if (!u || seenSite[k]) return "";   // one link per publisher: five pages of one site are one voice
+        seenSite[k] = 1;
+        return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(k) + "</a>";
+      }).filter(Boolean).join(" · ");
+      return '<div class="step inv"><div class="head">' + esc(label) + '</div><div class="body">'
+        + '<div class="kv">' + esc(st.why) + "</div>"
+        + (st.q ? '<div class="q">“' + esc(st.q) + "”" + filt + "</div>" : "")
+        + "<div>" + esc(st.result) + "</div>"
+        + (srcs ? '<div class="kv">sources: ' + srcs + "</div>" : "")
+        + "</div></div>";
+    }).join("");
+    const cnc = (f.couldNotConfirm || []).length ? '<div class="kv">Could not confirm: ' + f.couldNotConfirm.map(esc).join(" ") + "</div>" : "";
+    const dash = DASHBOARD_URL ? ' · <a href="' + esc(DASHBOARD_URL) + '" target="_blank" rel="noopener">every investigation, live</a>' : "";
+    const when = f.cached ? "investigated in the last ten minutes, reused" : replayed ? "investigated just now — not part of this recording" : "investigated just now";
+    const verdict = '<div class="step inv inv-verdict" data-sev="' + esc(f.severity) + '"><div class="head">incident verdict · decided from these findings</div><div class="body">'
+      + '<div class="inv-v">' + esc(f.verdict) + "</div>"
+      + '<div class="kv">severity ' + esc(f.severity) + " · confidence " + esc(f.confidence) + " · " + esc(f.calls) + " Linkup search" + (f.calls === 1 ? "" : "es") + " · " + esc(when) + "</div>"
+      + "<div>" + esc(f.action) + "</div>" + cnc
+      + '<div class="kv">' + esc(f.note || "") + dash + "</div>"
+      + "</div></div>";
+    return '<div class="inv-block">' + steps + verdict + "</div>";
+  }
+
   function fmtStep(s) {
     const cls = ["step", s.t];
     if (s.t === "detector") cls.push(s.denied ? "deny" : "leak");
@@ -453,16 +501,6 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     else if (s.t === "tool_call") { head = "the agent calls a tool"; body = "<code>" + esc(s.tool) + "</code>(" + esc(JSON.stringify(s.args || {})) + ")"; }
     else if (s.t === "tool_result") { head = "the tool answers → " + esc(s.tool); body = "<span class='kv'>" + esc(s.text) + "</span>"; }
     else if (s.t === "detector") { head = s.denied ? ("denied · " + esc(s.detector) + " stopped the call") : "no defence fired"; body = esc(s.text); }
-    else if (s.t === "research") {
-      head = s.replayLive
-        ? "where the keys were being sent — looked up just now, not part of this recording"
-        : "where the keys were being sent";
-      const srcs = (s.sources || []).map(function (x) { return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.name) + "</a>"; }).join(" · ");
-      body = esc(s.answer || s.text)
-        + '<div class="kv" style="margin-top:6px">' + (s.answer ? "Checked with Linkup" + (s.fresh ? "" : " (cached)") : "")
-        + (srcs ? " · " + srcs : "")
-        + " · the guard blocked the send regardless of what this says.</div>";
-    }
     else if (s.t === "model") { head = "the victim replies (no tool call)"; body = esc(s.text); }
     else if (s.t === "outcome") { head = "outcome"; body = esc(s.text); }
     else body = esc(s.text || "");
@@ -487,35 +525,32 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       tl.lastElementChild.classList.add("flash");
       i++;
       if (i < steps.length) setTimeout(add, delay);
-      else appendLiveResearch();   // only once the recording has finished playing
+      else appendInvestigation();   // only once the recording has finished playing
     }
-    // A recording cannot contain a live web lookup, and Replay is the primary
-    // button — so without this most visitors would never see the destination
-    // research at all. It is fetched now and appended, labelled so nothing implies
-    // the recording held it: the judge on the FREE path watches a real call, which
-    // is better evidence than a baked-in one. It must land AFTER the transcript has
-    // finished playing (the replay staggers its steps by 260ms, and the fetch
-    // resolves first), or the annotation interrupts the story it annotates. Live
-    // runs carry their own research step, so this only fills the replay gap, and a
-    // failure leaves the replay complete.
-    function appendLiveResearch() {
-      if (mode !== "replay" || !RESEARCH_URL) return;
-      // An answerless step (recorded without a Linkup key) must NOT count as
-      // "already researched", or the replay shows "could not look up" forever when
-      // a live answer is one fetch away.
-      if (steps.some(function (x) { return x.t === "research" && x.answer; })) return;
-      fetch(RESEARCH_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-        if (!d || !d.answer) return;
-        tl.insertAdjacentHTML("beforeend", fmtStep({
-          t: "research", host: d.host, answer: d.answer, sources: d.sources || [],
-          fresh: !!d.fresh, replayLive: true, text: d.answer,
-        }));
+    // The exposure investigation runs AFTER the run, from the outcome the server
+    // recorded for it (never from anything this page sends), for live runs and
+    // recordings alike. A recording cannot contain a live web search, so on replay
+    // it is fetched now and labelled as such. It must land after the transcript has
+    // finished playing, or it interrupts the story it is about.
+    function appendInvestigation() {
+      if (!RESEARCH_URL || o === "ERROR") return;
+      const qs = mode === "live" && data.transcriptId ? "run=" + encodeURIComponent(data.transcriptId)
+        : data.id ? "fixture=" + encodeURIComponent(data.id) : "";
+      if (!qs) return;
+      tl.insertAdjacentHTML("beforeend", '<div class="step inv" id="invWait"><div class="head">linkup · investigating where the credential was going</div><div class="body">Up to three searches, each chosen from what the last one found. About 10 s.</div></div>');
+      fetch(RESEARCH_URL + "?" + qs).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); }).then(function (x) {
+        const w = document.getElementById("invWait"); if (w) w.remove();
+        if (!x.ok) {
+          tl.insertAdjacentHTML("beforeend", '<div class="step inv"><div class="head">linkup · investigation unavailable</div><div class="body">' + esc(x.d.error || "failed") + ". The block never depended on it.</div></div>");
+          return;
+        }
+        tl.insertAdjacentHTML("beforeend", fmtInvestigation(x.d, mode === "replay"));
         tl.lastElementChild.classList.add("flash");
-      }).catch(function () { /* optional by design */ });
+      }).catch(function () { const w = document.getElementById("invWait"); if (w) w.remove(); });
     }
 
     if (delay) add();
-    else { tl.innerHTML = steps.map(fmtStep).join(""); appendLiveResearch(); }
+    else { tl.innerHTML = steps.map(fmtStep).join(""); appendInvestigation(); }
     let foot = `${esc(data.model || "")} · guard ${data.guard ? "on" : "off"} · invariant ${data.invariant ? "on" : "off"}` + (data.transcriptId ? ` · <span class="kv">run ${esc(data.transcriptId)}</span>` : "");
     // The receipt is evidence about a run that RAN. On an ERROR the run crashed
     // before it finished, and "the attacker's server received nothing" then reads
@@ -548,6 +583,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       ? fx.map(f => `<option value="${esc(f.id)}">${esc(f.label)}</option>`).join("")
       : `<option value="">(no recorded runs)</option>`;
     RESEARCH_URL = r.research || null;
+    DASHBOARD_URL = r.dashboard || null;
     if (!fx.length) { $("replay").disabled = true; $("replay").textContent = "No recordings"; }
     if (r.rate && r.rate.perIpUsed) setRate(r.rate);
     // The site's hero console is a plain form whose no-JS path submits here:

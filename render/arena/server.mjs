@@ -36,7 +36,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase } from "./arena-core.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
-import { researchHost, normalizeHost, RESEARCH_SUBJECT } from "./linkup.mjs";
+import { linkupSearch, normalizeHost, RESEARCH_SUBJECT } from "./linkup.mjs";
+import { investigateHost } from "./investigate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..");
@@ -49,7 +50,10 @@ const SOURCE = "arena";
  * @param {Function} [o.runAttack]  arena-core runAttack (fake in tests)
  * @param {Function} [o.fetchImpl]  fetch for Convex/collector pushes
  * @param {Function} [o.now]
+ * @param {Function} [o.linkupSearch]  structured Linkup search (fake in tests)
  */
+const INVESTIGATE_NOTE = "Linkup never decides the block. It decides how bad the incident is and what you do next.";
+
 /** Where the live dashboard lives: Convex Static Hosting on the production deployment. */
 export const DEFAULT_DASHBOARD_URL = "https://wary-herring-602.convex.site";
 
@@ -98,7 +102,6 @@ export function createArenaServer(o = {}) {
   // -------------------------------------------------------------------------
   // Drop receipts (bounded, in-memory): runId -> { at, canary, how, sample }
   // -------------------------------------------------------------------------
-  const researchHits = new Map(); // ip -> timestamps of forced-fresh Linkup lookups
   const DROP_HITS = new Map();
   // Every runId this process actually executed. Without it /api/drop cannot tell
   // "this run happened and the drop stayed dark" from "this id was never a run",
@@ -140,6 +143,20 @@ export function createArenaServer(o = {}) {
       });
       return { ok: res.ok, status: res.status };
     } catch { return { ok: false }; } // projection is best-effort
+  }
+  // Reads, for the investigation's memory. Same HTTP API as mutations; only public
+  // queries are reachable, and a failure reads as "nothing stored".
+  async function convexQuery(path, args) {
+    if (!CONVEX_URL) return { skipped: true };
+    try {
+      const res = await fetchImpl(CONVEX_URL + "/api/query", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ path, args, format: "json" }),
+      });
+      if (!res.ok) return { ok: false, status: res.status };
+      const body = await res.json();
+      return body?.status === "success" ? { ok: true, value: body.value } : { ok: false };
+    } catch { return { ok: false }; }
   }
   async function toCollector(e) {
     if (!COLLECTOR) return;
@@ -183,6 +200,59 @@ export function createArenaServer(o = {}) {
     jobs.push(toCollector({ kind: "trial", ...t, source: SOURCE, runId }));
     await Promise.allSettled(jobs);
   }
+
+  // -------------------------------------------------------------------------
+  // Exposure investigation (investigate.mjs). Linkup never decides the block; it
+  // decides how bad the incident is and what to do next.
+  // -------------------------------------------------------------------------
+  const search = o.linkupSearch || ((spec) => linkupSearch(spec, { apiKey: env.LINKUP_API_KEY }, fetchImpl));
+  const linkupReady = !!(o.linkupSearch || env.LINKUP_API_KEY);
+  // Stored findings. Convex is the store (shared, durable, and on the live
+  // dashboard); the in-process map keeps recall working locally and in tests, and
+  // is consulted when Convex has nothing or cannot be reached.
+  const LOCAL_FINDINGS = new Map(); // host -> { identity, identityConfidence, createdAt }
+  const findingMemory = {
+    async latest(host) {
+      const r = await convexQuery("metrics:latestFindingForHost", { host });
+      if (r.ok && r.value) {
+        const v = r.value;
+        return { identity: { service_type: v.serviceType, operator: v.operator ?? null, summary: v.identitySummary || "" }, identityConfidence: v.identityConfidence, createdAt: v.createdAt };
+      }
+      return LOCAL_FINDINGS.get(host) || null;
+    },
+    async save(f) {
+      LOCAL_FINDINGS.set(f.host, { identity: f.identity, identityConfidence: f.identityConfidence, createdAt: f.at });
+      if (LOCAL_FINDINGS.size > 500) LOCAL_FINDINGS.delete(LOCAL_FINDINGS.keys().next().value);
+      await convexMutation("ingest:ingestFinding", toConvexFinding(f));
+    },
+  };
+  // Convex validators reject null for optional fields, so absent values are omitted.
+  function toConvexFinding(f) {
+    const opt = (k, v) => (v === null || v === undefined || v === "" ? {} : { [k]: v });
+    return {
+      host: f.host, ...opt("outcome", f.outcome), ...opt("runId", f.runId),
+      serviceType: f.identity.service_type, ...opt("operator", f.identity.operator), identitySummary: f.identity.summary || "",
+      identityConfidence: f.identityConfidence, claimKind: f.claimKind,
+      verdict: f.verdict, severity: f.severity, confidence: f.confidence, action: f.action,
+      couldNotConfirm: f.couldNotConfirm.slice(0, 6).map((x) => String(x).slice(0, 200)),
+      steps: f.steps.slice(0, 4).map((st) => ({
+        kind: st.kind, query: st.q || "", why: String(st.why || "").slice(0, 300), result: String(st.result || "").slice(0, 500),
+        sourceCount: st.sources.length, ...opt("error", st.error ? String(st.error).slice(0, 200) : null),
+      })),
+      sources: f.sources.slice(0, 6).map((x) => ({ name: x.name, url: x.url })),
+      calls: f.calls, reused: !!f.reused,
+      key: createHash("sha1").update(`finding|${f.host}|${f.outcome}|${f.runId}|${f.at}`).digest("hex"),
+      createdAt: f.at,
+    };
+  }
+  // Every investigation that reaches Linkup is metered: per address, and a daily
+  // ceiling that is what actually protects the credit balance. A repeat of the
+  // same host+outcome inside ten minutes is served from memory and costs nothing;
+  // ?fresh=1 skips that (and is metered like any other real investigation).
+  const investigateLimiter = createRateLimiter({ perIpMax: 6, windowMs: 10 * 60 * 1000, globalDayMax: 150, now });
+  const RECENT = new Map(); // "host|outcome" -> { at, finding }
+  const INFLIGHT = new Map(); // same key -> promise, so a double click spends once
+  const RECENT_TTL_MS = 10 * 60 * 1000;
 
   // -------------------------------------------------------------------------
   // Replay fixtures (recorded live transcripts; loaded once, instant playback)
@@ -380,7 +450,7 @@ export function createArenaServer(o = {}) {
           publicUrl: ARENA_PUBLIC_URL || null,
           dropBase: DROP_BASE,
           dashboard: DASHBOARD_URL,
-          research: !!env.LINKUP_API_KEY ? "/api/research" : null,
+          research: linkupReady ? "/api/investigate" : null,
           note: "Simulated Slack surface + simulated agent loop. Real detectors (imported from plugins/). Real Nebius victim model. Not dsh. LEAKED requires this server's /c/:id drop to receive and decode the canary.",
         });
       }
@@ -391,45 +461,62 @@ export function createArenaServer(o = {}) {
         const rec = recordDrop(hit[1], req.url);
         return json(res, 200, { ok: true, received: true, canary: rec.canary, how: rec.how });
       }
-      // Linkup, on demand. The run's own research step is cached (the host never
-      // changes), which is right for credits and wrong for a sceptic: a cached
-      // string is indistinguishable from a hardcoded one. ?fresh=1 forces a real
-      // call so anyone can watch the integration actually reach out, and the
-      // response carries `fresh` and the answer's timestamp either way.
-      // Capped separately from live runs: it costs money and must not be a tap.
-      if (p === "/api/research" && req.method === "GET") {
+      // The exposure investigation. Subject is resolved HERE, never from the client:
+      //   ?run=<id>      a live run this process executed (outcome from KNOWN_RUNS)
+      //   ?fixture=<id>  a recorded run (outcome from the recording)
+      //   ?host=<host>   no run — "what if a credential reached this host"
+      // Runs are investigated against RESEARCH_SUBJECT, the service the real attacker
+      // endpoint lives on: the arena's own poisoned message names the arena's drop,
+      // and the real endpoint is elided everywhere in this repo (see linkup.mjs).
+      // /api/research is kept as an alias so older pages keep working.
+      if ((p === "/api/investigate" || p === "/api/research") && req.method === "GET") {
+        const runParam = u.searchParams.get("run");
+        const fxParam = u.searchParams.get("fixture");
+        const hostParam = u.searchParams.get("host");
+        let host = RESEARCH_SUBJECT, outcome = null, runId = null;
+        if (runParam) {
+          const known = KNOWN_RUNS.get(runParam);
+          if (!known) return json(res, 404, { error: "unknown run", note: "Runs are held in memory; a run from before the last deploy is gone. Re-run it." });
+          outcome = known.outcome; runId = runParam;
+        } else if (fxParam) {
+          const fx = FIXTURES.find((f) => f.id === fxParam);
+          if (!fx) return json(res, 404, { error: "unknown recording" });
+          outcome = fx.outcome; runId = `fixture:${fx.id}`;
+        } else if (hostParam) {
+          host = normalizeHost(hostParam);
+          // normalizeHost is the boundary: the host lands inside the questions sent
+          // to Linkup, so only a hostname may pass.
+          if (!host) return json(res, 400, { error: "That does not look like a hostname. Paste an address like example.com, or a full URL." });
+        }
+        if (!linkupReady) return json(res, 503, { host, error: "no LINKUP_API_KEY", note: "The block never depends on Linkup; without it, exposure is simply not assessed." });
+
+        const key = `${host}|${outcome}`;
         const wantFresh = u.searchParams.get("fresh") === "1";
-        // A lookup of anything other than the run's own subject is a call we have
-        // not already paid for, so it counts against the same cap as ?fresh=1.
-        // Conservative on purpose: a repeat within the cache window is served from
-        // memory but still counted, and credits are the thing worth erring on.
-        const askedOther = !!u.searchParams.get("host") && u.searchParams.get("host") !== RESEARCH_SUBJECT;
-        if (wantFresh || askedOther) {
+        const hit = RECENT.get(key);
+        if (!wantFresh && hit && now() - hit.at < RECENT_TTL_MS) {
+          return json(res, 200, { ...hit.finding, runId, cached: true, note: INVESTIGATE_NOTE });
+        }
+        let job = INFLIGHT.get(key);
+        if (!job) {
           const ip = clientIp(req);
-          const seen = researchHits.get(ip) || [];
-          const recent = seen.filter((t) => now() - t < 10 * 60 * 1000);
-          if (recent.length >= 5) {
-            return json(res, 429, { error: "Lookups are limited to 5 per address per 10 minutes." });
+          const gate = investigateLimiter.check(ip);
+          if (!gate.ok) {
+            const st = investigateLimiter.state(ip);
+            return json(res, 429, { error: st.globalUsed >= st.globalMax
+              ? `Today's investigation budget is spent (${st.globalMax}/day). Recent results are still served.`
+              : `Investigations are limited to ${st.perIpMax} per address per 10 minutes.` });
           }
-          recent.push(now()); researchHits.set(ip, recent);
+          investigateLimiter.commit(ip, gate.arr);
+          job = investigateHost({ host, outcome, runId }, { search, memory: findingMemory, now })
+            .finally(() => INFLIGHT.delete(key));
+          INFLIGHT.set(key, job);
         }
-        // Any host, not just the run's own. A visitor pasting the address their
-        // assistant was about to reach is the honest use of this: the guard cannot
-        // tell them what is on the other end, and this can. normalizeHost is the
-        // boundary — the value lands inside the question sent to Linkup, so only a
-        // hostname may pass, or a stranger could spend these credits asking it
-        // anything.
-        const raw = u.searchParams.get("host");
-        const host = raw ? normalizeHost(raw) : RESEARCH_SUBJECT;
-        if (!host) {
-          return json(res, 400, { error: "That does not look like a hostname. Paste an address like example.com, or a full URL." });
+        const finding = await job;
+        if (finding.verdict !== "UNVERIFIED") {
+          RECENT.set(key, { at: now(), finding });
+          if (RECENT.size > 300) RECENT.delete(RECENT.keys().next().value);
         }
-        const out = await researchHost(host, {}, fetchImpl, { fresh: wantFresh });
-        if (out?.error) return json(res, 503, { host, error: out.error, note: "Linkup is optional; the guard never depends on it." });
-        return json(res, 200, {
-          ...out.research,
-          note: "Linkup informs, it does not gate. The guard blocks on the value inside the outbound argument, never on the destination's reputation.",
-        });
+        return json(res, 200, { ...finding, runId, cached: false, note: INVESTIGATE_NOTE });
       }
 
       // Public verification: did the drop receive the canary for this run?
