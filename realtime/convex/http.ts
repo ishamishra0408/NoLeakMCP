@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, components } from "./_generated/api";
+import { registerStaticRoutes } from "@convex-dev/static-hosting";
 
 const http = httpRouter();
 
@@ -28,5 +29,11 @@ http.route({
     });
   }),
 });
+
+// Everything else -> the dashboard, via Convex Static Hosting (see convex.config.ts).
+// Registered LAST: exact routes win over the static catch-all, so /guard and
+// /invariant keep answering the dsh plugins. Paths without an extension, such as
+// /dashboard, fall back to index.html.
+registerStaticRoutes(http, components.staticHosting);
 
 export default http;

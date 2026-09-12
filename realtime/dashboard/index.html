@@ -8,7 +8,7 @@
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#f5f6f9" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0b0e14" media="(prefers-color-scheme: dark)" />
-<link rel="icon" href="/assets/mark.svg" type="image/svg+xml" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20width%3D%2232%22%20height%3D%2232%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%20%3Cpath%20d%3D%22M16%203.25%2026.5%207.1v7.6c0%206.6-4.4%2011.7-10.5%2013.95C9.9%2026.4%205.5%2021.3%205.5%2014.7V7.1Z%22%20stroke%3D%22%23c8a96a%22%20stroke-width%3D%221.75%22%2F%3E%20%3Cpath%20d%3D%22M16%209v7.5%22%20stroke%3D%22%23e6edf3%22%20stroke-width%3D%221.75%22%2F%3E%20%3Cpath%20d%3D%22M11.75%2020h8.5%22%20stroke%3D%22%23e6edf3%22%20stroke-width%3D%221.75%22%2F%3E%20%3C%2Fsvg%3E" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
@@ -280,14 +280,14 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
 <header class="site-header glass glass--refract">
   <nav class="nav" aria-label="Primary">
     <div class="wrap nav__in">
-      <a class="nav__brand" href="/">
+      <a class="nav__brand" href="/" data-home="/">
         <svg class="mark" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="m-o" d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke-width="1.75"/><path class="m-i" d="M16 9v7.5" stroke-width="1.75"/><path class="m-i" d="M11.75 20h8.5" stroke-width="1.75"/></svg>
         No-Leak-MCP
       </a>
       <ul class="nav__links">
-        <li><a class="nav__link" href="/">Site</a></li>
-        <li><a class="nav__link" id="arenaLink" href="/arena">Arena</a></li>
-        <li><a class="nav__link is-active" href="/dashboard" aria-current="page">Dashboard</a>
+        <li><a class="nav__link" href="/" data-home="/">Site</a></li>
+        <li><a class="nav__link" id="arenaLink" href="/arena" data-home="/arena">Arena</a></li>
+        <li><a class="nav__link is-active" href="/dashboard" data-home="/dashboard" aria-current="page">Dashboard</a>
         <a class="nav__link" href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a></li>
       </ul>
     </div>
@@ -337,10 +337,10 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
 
 <footer>
   <div class="wrap foot">
-    <a class="nav__brand" href="/"><svg class="mark" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="m-o" d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke-width="1.75"/><path class="m-i" d="M16 9v7.5" stroke-width="1.75"/><path class="m-i" d="M11.75 20h8.5" stroke-width="1.75"/></svg>No-Leak-MCP</a>
+    <a class="nav__brand" href="/" data-home="/"><svg class="mark" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="m-o" d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke-width="1.75"/><path class="m-i" d="M16 9v7.5" stroke-width="1.75"/><path class="m-i" d="M11.75 20h8.5" stroke-width="1.75"/></svg>No-Leak-MCP</a>
     <a href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a>
-    <a href="/arena">Arena</a>
-    <a href="/">Site</a>
+    <a href="/arena" data-home="/arena">Arena</a>
+    <a href="/" data-home="/">Site</a>
     <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026 · provenance and the in-event delta in <span class="mono">README.md</span> and <span class="mono">CHANGELOG.md</span><br />Not entering Render Workflows: Render hosts all three services here, but that challenge requires the Workflows product and this uses ordinary web and worker services.</span>
   </div>
 </footer>
@@ -381,12 +381,25 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
   })();
   const q = new URLSearchParams(location.search);
 
-  // The Arena link: ?arena=<url> wins, else the same-origin /arena. When the
-  // dashboard is hosted elsewhere (Vercel), pass the absolute arena URL.
+  // This one file is served from two origins: the Render service (beside the site
+  // and the arena) and the Convex deployment's own .convex.site (uploaded as-is by
+  // Convex Static Hosting — see realtime/convex/convex.config.ts). The nav links are written
+  // relative, which is right on Render and broken on Convex, where there is no
+  // site and no arena. So on a .convex.site origin they point at the Render service.
+  // ?site=<origin> overrides both (local testing, or any other host). The link to the
+  // page you are already on is left alone, so it never jumps to another origin.
+  const onConvexSite = /\.convex\.site$/.test(location.hostname);
+  const home = q.get("site") || (onConvexSite ? "https://noleak-arena-n14r.onrender.com" : "");
+  if (home) document.querySelectorAll("a[data-home]:not([aria-current])").forEach((a) => { a.href = home + a.dataset.home; });
+  // ?arena=<url> still wins for the Arena link alone.
   const arenaHref = q.get("arena");
   if (arenaHref) document.getElementById("arenaLink").href = arenaHref;
   const ls = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
-  let url = q.get("url") || ls.get("convexUrl") || "https://wary-herring-602.convex.cloud";
+  // Served from a deployment's .convex.site, read that SAME deployment's
+  // .convex.cloud — so a dev deployment shows dev data and prod shows prod, and the
+  // page can never quietly display a different deployment than the one hosting it.
+  const ownDeployment = onConvexSite ? "https://" + location.hostname.replace(/\.convex\.site$/, ".convex.cloud") : "";
+  let url = q.get("url") || ownDeployment || ls.get("convexUrl") || "https://wary-herring-602.convex.cloud";
   const conn = document.getElementById("conn");
   const setup = document.getElementById("setup");
   document.getElementById("save").onclick = () => {

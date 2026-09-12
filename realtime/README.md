@@ -14,6 +14,8 @@ in the same instant.
 | `convex/metrics.ts` | `feed`, `cells`, `summary` reactive queries (read side) |
 | `bridge/tail-to-convex.mjs` | tails the dsh JSONL logs → Convex |
 | `dashboard/index.html` | subscribes to the queries; renders the matrix + feed |
+| `convex/convex.config.ts` | mounts **Convex Static Hosting**, which serves `dashboard/` at `https://<deployment>.convex.site` |
+| `convex/http.ts` | `/guard` and `/invariant` (polled by the dsh plugins), then the static catch-all |
 
 ## Setup
 
@@ -30,8 +32,24 @@ npm run backfill      # push existing log lines once
 npm run bridge        # stream new guard/scorer/trial events live
 ```
 
-Open the dashboard (`npm run dashboard` → http://127.0.0.1:8080) and paste your
+Open the dashboard locally (`npm run dashboard` → http://127.0.0.1:8080) and paste your
 `CONVEX_URL` when prompted, or open `dashboard/index.html?url=<CONVEX_URL>`.
+
+## Deploy — backend and dashboard, both on Convex
+
+```bash
+npm run hosting:dev   # smoke test: upload dashboard/ to your dev deployment's .convex.site
+npm run deploy        # production: `convex deploy`, then upload dashboard/ with --prod
+```
+
+Production is live at **https://wary-herring-602.convex.site**. There is no build step:
+`dashboard/` is uploaded as-is, and served from a `.convex.site` origin the page reads
+that same deployment's data and points its Site/Arena links at the Render service.
+
+The component is mounted **without** an `httpPrefix`. Its default mode would move this
+app's HTTP routes under `/api`, and every running dsh session polls `/guard` and
+`/invariant` at the root — they would silently fall back to their fail-safe instead of
+following the dashboard. `tests/dashboard-page.test.mjs` pins that.
 
 ## Data flow
 
@@ -49,8 +67,7 @@ and re-run `npm run backfill` to rebuild the projection from the authoritative l
 
 > **Schema change (2026-09-08):** `events` gained optional `source` (`"arena"` | `"dsh"`)
 > and `runId`, mapped in `ingestEvent` / `ingestTrial`, so the dashboard can tag each row
-> and render the arena's `exfil/hit` LEAK rows. **The owner must run `cd realtime && npx
-> convex deploy`** for this to take effect on the live deployment. Both fields are optional,
+> and render the arena's `exfil/hit` LEAK rows. Deployed to production. Both fields are optional,
 > so existing rows and the dsh bridge keep working unchanged; the arena server falls back to
 > the legacy trial shape if the deployment has not been updated yet.
 
