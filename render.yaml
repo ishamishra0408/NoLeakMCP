@@ -56,7 +56,8 @@ services:
 
   # THE PUBLIC SERVICE. This one alone serves everything a judge opens:
   #   /           the website          /arena      the judge-runnable arena
-  #   /dashboard  the live feed        /c/:id      the attacker drop the verdict checks
+  #   /dashboard  → 302 to the live feed on Convex Static Hosting (wary-herring-602.convex.site)
+  #   /c/:id      the attacker drop the verdict checks
   # rootDir is deliberately omitted so it builds from the REPO ROOT and can import
   # plugins/* directly — the REAL detector functions, not copies of them.
   #

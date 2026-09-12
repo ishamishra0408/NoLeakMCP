@@ -7,8 +7,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runAttack, DECOY_KEYRING, isDropUrl, inspectDrop, dshToolName, pickPublicBase } from "../render/arena/arena-core.mjs";
 import { _clearResearchCache, RESEARCH_SUBJECT, ATTACKER_HOST_LABEL, trimAnswer, normalizeHost } from "../render/arena/linkup.mjs";
-import { createArenaServer } from "../render/arena/server.mjs";
-import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT } from "node:fs";
+import { createArenaServer, DEFAULT_DASHBOARD_URL } from "../render/arena/server.mjs";
+import { existsSync as existsSyncT, writeFileSync as writeFileSyncT, unlinkSync as unlinkSyncT, readFileSync as readFileSyncT } from "node:fs";
 import { dirname as dirnameT, join } from "node:path";
 import { fileURLToPath as fileURLToPathT } from "node:url";
 const REPO_ROOT_T = dirnameT(dirnameT(fileURLToPathT(import.meta.url)));
@@ -521,7 +521,12 @@ test("moving the arena to /arena left the API routes in place", async () => {
   try {
     assert.equal((await fetch(url + "/health")).status, 200);
     assert.equal((await fetch(url + "/api/config")).status, 200);
-    assert.equal((await fetch(url + "/dashboard")).status, 200);
+    // The dashboard is hosted on Convex now; this service only redirects to it.
+    // redirect: "manual" matters: following it would fetch the live convex.site and
+    // quietly turn this network-free test into one that needs the internet.
+    const dash = await fetch(url + "/dashboard", { redirect: "manual" });
+    assert.equal(dash.status, 302);
+    assert.equal(dash.headers.get("location"), DEFAULT_DASHBOARD_URL);
     assert.equal((await fetch(url + "/api/replay", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status, 200);
   } finally { await app.close(); }
 });
@@ -566,8 +571,11 @@ test("arena and dashboard load the site's type system and nothing else external 
   const { app, url } = await boot();
   try {
     const fontsHref = 'href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"';
-    for (const path of ["/", "/arena", "/dashboard"]) {
-      const html = await (await fetch(url + path)).text();
+    // The dashboard is no longer served here (it 302s to Convex), so it is read from
+    // its source file — the same bytes Convex Static Hosting uploads.
+    const pages = [["/", await (await fetch(url + "/")).text()], ["/arena", await (await fetch(url + "/arena")).text()],
+      ["dashboard", readFileSyncT(join(REPO_ROOT_T, "realtime", "dashboard", "index.html"), "utf8")]];
+    for (const [path, html] of pages) {
       assert.ok(html.includes(fontsHref), path + " loads the shared font stylesheet");
       assert.equal((html.match(/fonts\.googleapis\.com\/css2/g) || []).length, 1, path + " loads it once");
       for (const tok of ['--serif:"Instrument Serif"', '--sans:"IBM Plex Sans"', '--mono:"IBM Plex Mono"']) assert.ok(html.includes(tok), path + " declares " + tok);
@@ -656,4 +664,21 @@ test("the elided attacker endpoint is never republished", async () => {
     assert.ok(!/eng-build-health/i.test(body), `${f} must not name the elided endpoint`);
     assert.ok(!/[a-z0-9-]+\.free\.beeceptor\.com/i.test(body), `${f} must not name any *.free.beeceptor.com endpoint`);
   }
+});
+
+// The dashboard has one home, Convex Static Hosting. Every link a judge can click on the
+// Render-served pages must go straight there — not to this service's /dashboard, which
+// only redirects, and never to a stale second copy.
+test("site and arena link straight to the Convex-hosted dashboard", async () => {
+  const { app, url } = await boot();
+  try {
+    for (const path of ["/", "/arena"]) {
+      const html = await (await fetch(url + path)).text();
+      assert.doesNotMatch(html, /href="\/dashboard"/, path + " still links to the Render /dashboard");
+      const n = html.split('href="' + DEFAULT_DASHBOARD_URL + '"').length - 1;
+      assert.ok(n >= 2, path + " should link to the Convex dashboard in nav and footer, found " + n);
+    }
+    const cfg = await (await fetch(url + "/api/config")).json();
+    assert.equal(cfg.dashboard, DEFAULT_DASHBOARD_URL);
+  } finally { await app.close(); }
 });

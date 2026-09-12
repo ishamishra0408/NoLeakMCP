@@ -50,6 +50,9 @@ const SOURCE = "arena";
  * @param {Function} [o.fetchImpl]  fetch for Convex/collector pushes
  * @param {Function} [o.now]
  */
+/** Where the live dashboard lives: Convex Static Hosting on the production deployment. */
+export const DEFAULT_DASHBOARD_URL = "https://wary-herring-602.convex.site";
+
 export function createArenaServer(o = {}) {
   const env = o.env || process.env;
   const runAttack = o.runAttack || realRunAttack;
@@ -316,11 +319,11 @@ export function createArenaServer(o = {}) {
     if (!(start <= end) || start >= size) return null;
     return { start, end, partial: true };
   }
-  // The shared live dashboard (realtime/dashboard/index.html) served from the
-  // same origin so judges get one public URL for both. It reads Convex directly.
-  const DASHBOARD_HTML = (() => {
-    try { return readFileSync(join(REPO_ROOT, "realtime", "dashboard", "index.html")); } catch { return null; }
-  })();
+  // The live dashboard has ONE home: Convex Static Hosting, on the same deployment
+  // that stores and syncs its data (realtime/convex/convex.config.ts). This service
+  // used to serve a second copy at /dashboard; it now redirects there instead, so a
+  // judge who follows any old link lands on the Convex-hosted page, never a duplicate.
+  const DASHBOARD_URL = (env.DASHBOARD_URL || DEFAULT_DASHBOARD_URL).replace(/\/+$/, "");
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -348,9 +351,10 @@ export function createArenaServer(o = {}) {
         return res.end(req.method === "HEAD" ? undefined : a.body.subarray(r.start, r.end + 1));
       }
       if (p === "/dashboard" || p === "/dashboard/") {
-        if (!DASHBOARD_HTML) return json(res, 404, { error: "dashboard not bundled" });
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-        return res.end(DASHBOARD_HTML);
+        // 302, not 301: browsers cache a 301 indefinitely, and the dashboard's home
+        // is a deployment URL that could change.
+        res.writeHead(302, { location: DASHBOARD_URL, "cache-control": "no-store" });
+        return res.end();
       }
       if (p === "/health") {
         // keyLen + keyFp exist because "live: true" only means the variable is
@@ -375,7 +379,7 @@ export function createArenaServer(o = {}) {
           fixtures: FIXTURE_LIST,
           publicUrl: ARENA_PUBLIC_URL || null,
           dropBase: DROP_BASE,
-          dashboard: DASHBOARD_HTML ? "/dashboard" : null,
+          dashboard: DASHBOARD_URL,
           research: !!env.LINKUP_API_KEY ? "/api/research" : null,
           note: "Simulated Slack surface + simulated agent loop. Real detectors (imported from plugins/). Real Nebius victim model. Not dsh. LEAKED requires this server's /c/:id drop to receive and decode the canary.",
         });

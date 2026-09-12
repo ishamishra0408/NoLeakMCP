@@ -41,7 +41,7 @@ RID=$(node -e 'console.log(require("/tmp/run.json").transcriptId)')
 curl -s $ARENA/api/drop/$RID # {"received":true,"canary":true,...}
 ```
 
-In the Convex dashboard feed (or `$ARENA/dashboard`) confirm rows tagged **`source=arena`**:
+In the live dashboard (https://wary-herring-602.convex.site) confirm rows tagged **`source=arena`**:
 a `scorer/verdict`, an `exfil/hit` (LEAK), and a `trial`.
 
 ## 3. Convex — publish the schema change
@@ -55,13 +55,12 @@ cd realtime && npx convex deploy      # owner-only; requires Convex login
 Older rows keep working (both fields are optional); the arena falls back to the
 legacy trial shape if the deployment hasn't been updated yet.
 
-## 4. Dashboard — link back to the arena
+## 4. Dashboard — hosted on Convex, not here
 
-The dashboard's "Try the arena →" link defaults to the relative `/arena` (correct when
-served by the arena at `$ARENA/dashboard`). For the Vercel-hosted copy set
-`const ARENA_URL = "https://…/arena"` in `realtime/dashboard/index.html`, or open it with
-`?arena=<ARENA_URL>/arena`. The arena also serves the dashboard at `$ARENA/dashboard` (one public URL
-for judges).
+The dashboard lives on Convex Static Hosting (`cd realtime && npm run deploy`; see
+`realtime/README.md`). This service only redirects `/dashboard` there. Served from a
+`.convex.site` origin, the page points its Site and Arena links back at this service on
+its own; `?site=<origin>` overrides that.
 
 ## Rollback
 

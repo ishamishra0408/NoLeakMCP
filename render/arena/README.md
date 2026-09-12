@@ -49,9 +49,9 @@ means exactly what the guard would have blocked, the same test with the control 
 | `GET /` | The public website (`site/index.html`) |
 | `GET /arena` | The arena UI |
 | `GET /assets/*` | Website assets (`site/assets/`, extension allowlist) |
-| `GET /dashboard` | The shared live dashboard (same origin; reads Convex directly) |
+| `GET /dashboard` | 302 to the live dashboard on Convex Static Hosting (`DASHBOARD_URL`, default `https://wary-herring-602.convex.site`) |
 | `GET /health` | Liveness + whether live runs are enabled + fixture count |
-| `GET /api/config` | Models, fixtures, rate-limit state, drop base, dashboard path |
+| `GET /api/config` | Models, fixtures, rate-limit state, drop base, dashboard URL |
 | `POST /api/attack` | Run one live attack `{model, guard, invariant}` (rate-limited) |
 | `POST /api/replay` | Play a recorded fixture `{id}` instantly |
 | `GET /c/:id?d=` | Attacker drop listener; records the receipt the LEAKED verdict needs |
