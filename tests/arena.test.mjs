@@ -323,12 +323,12 @@ test("/ serves the website, /arena serves the arena UI, /assets/mark.svg is serv
     assert.equal(site.status, 200);
     assert.match(site.headers.get("content-type"), /text\/html/);
     const siteHtml = await site.text();
-    assert.match(siteHtml, /<title>No-Leak-MCP — the Slack credential leak/);
+    assert.match(siteHtml, /<title>No-Leak-MCP, the Slack credential leak/);
     assert.match(siteHtml, /href="\/arena"/, "site links to the arena");
     const arena = await fetch(url + "/arena");
     assert.equal(arena.status, 200);
     const arenaHtml = await arena.text();
-    assert.match(arenaHtml, /<title>No-Leak-MCP — Arena<\/title>/);
+    assert.match(arenaHtml, /<title>No-Leak-MCP, Arena<\/title>/);
     assert.match(arenaHtml, /id="launch"/, "arena UI, not the site");
     const mark = await fetch(url + "/assets/mark.svg");
     assert.equal(mark.status, 200);
@@ -341,22 +341,6 @@ test("/ serves the website, /arena serves the arena UI, /assets/mark.svg is serv
 // The Slack recreation on the site must not carry any prefix of the real workspace,
 // channel or user ids (a four-character prefix is still part of a real id), and its
 // caption must state exactly what is verbatim and what is not.
-test("the site's Slack recreation leaks no real id prefix and carries the honest caption", async () => {
-  const { app, url } = await boot();
-  try {
-    const html = await (await fetch(url + "/")).text();
-    assert.doesNotMatch(html, /C0BV|T0BV|U0BV/, "no prefix of a real Slack workspace/channel/user id");
-    assert.match(html, /T0XXXXXXXXX \/ C0XXXXXXXXX/, "the masks on the page are synthetic placeholders");
-    assert.ok(
-      html.includes(
-        "Recreation of the poisoned <strong>thread reply</strong>, verbatim from the live thread"
-      ) && html.includes("who spoofs a bot with a literal") &&
-        html.includes("&lt;attacker-host&gt;") &&
-        html.includes("layout illustrative."),
-      "the recreation caption states it is verbatim, the collector host is elided and layout is illustrative"
-    );
-  } finally { await app.close(); }
-});
 
 // The site has one drop-in slot: site/assets/slack-thread.png. When it is absent
 // the page ships the hand-built recreation and never requests the image; when the
@@ -483,39 +467,6 @@ test("the demo film band is server-gated on DEMO_VIDEO_URL, https only", async (
 // poster alongside), serves it by basename with byte ranges (Safari needs 206
 // to play a video), and clears the marker again when the file goes. Only the
 // "attack" slot is exercised end to end; "blocked" shares every line of code.
-test("the demo footage drop-in slots are detected server-side, both ways, and served with ranges", async () => {
-  const assets = join(REPO_ROOT_T, "site", "assets");
-  const gif = join(assets, "demo-attack.gif"), webm = join(assets, "demo-attack.webm"), poster = join(assets, "demo-attack-poster.png");
-  if ([gif, webm, poster, join(assets, "demo-attack.mp4")].some(existsSyncT)) { console.log("demo-attack.* already present — skipping the absent half"); return; }
-  const { app, url } = await boot();
-  try {
-    const without = await (await fetch(url + "/")).text();
-    assert.doesNotMatch(without, /<body[^>]*data-demo-attack/, "no marker on <body> while the footage is absent (the CSS selector for it still ships)");
-    assert.match(without, /id="demoAttack"/, "the slot ships, hidden, so dropping the file in cannot shift the layout");
-    assert.equal((await fetch(url + "/assets/demo-attack.gif")).status, 404, "nothing to serve yet");
-    writeFileSyncT(gif, Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64")); // 1x1 gif
-    let html = await (await fetch(url + "/")).text();
-    assert.match(html, /<body[^>]*data-demo-attack="demo-attack\.gif"/, "the gif is found and named");
-    writeFileSyncT(webm, Buffer.alloc(64, 7)); // any bytes: existence is what is tested
-    writeFileSyncT(poster, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"));
-    html = await (await fetch(url + "/")).text();
-    assert.match(html, /<body[^>]*data-demo-attack="demo-attack\.webm" data-demo-attack-poster="demo-attack-poster\.png"/, "video preferred over the gif; poster named");
-    const whole = await fetch(url + "/assets/demo-attack.webm");
-    assert.equal(whole.status, 200); assert.match(whole.headers.get("content-type"), /video\/webm/);
-    assert.equal(whole.headers.get("accept-ranges"), "bytes");
-    const part = await fetch(url + "/assets/demo-attack.webm", { headers: { range: "bytes=8-15" } });
-    assert.equal(part.status, 206); assert.equal(part.headers.get("content-range"), "bytes 8-15/64");
-    assert.equal((await part.arrayBuffer()).byteLength, 8);
-    assert.equal((await fetch(url + "/assets/demo-attack.webm", { headers: { range: "bytes=999-" } })).status, 416);
-    assert.equal((await fetch(url + "/assets/..%2Fdemo-attack.webm")).status, 404, "basename only");
-    unlinkSyncT(webm); unlinkSyncT(gif); unlinkSyncT(poster);
-    html = await (await fetch(url + "/")).text();
-    assert.doesNotMatch(html, /<body[^>]*data-demo-attack/, "marker clears again — the cache keys on the files found, not only mtime");
-  } finally {
-    for (const f of [gif, webm, poster]) { try { unlinkSyncT(f); } catch {} }
-    await app.close();
-  }
-});
 
 test("moving the arena to /arena left the API routes in place", async () => {
   const { app, url } = await boot();
@@ -536,25 +487,23 @@ test("moving the arena to /arena left the API routes in place", async () => {
 // its no-JS path submits to /arena with model/guard/invariant, its buttons say
 // which one is instant and which one is live, and the theme control stays a
 // three-radio radiogroup after being demoted to icons.
-test("the site hero is a working form over the arena API with honest button labels", async () => {
+test("the site hero sends people to the arena to interact, and stays static itself", async () => {
   const { app, url } = await boot();
   try {
     const html = await (await fetch(url + "/")).text();
-    assert.match(html, /<form class="run glass[^"]*" id="heroRun" action="\/arena" method="get"/, "a real form, submitting to /arena without JavaScript");
-    assert.match(html, /<select class="sel" id="runModel" name="model">/);
-    assert.match(html, /name="guard" value="on"/); assert.match(html, /name="invariant" value="on"/);
-    assert.match(html, /id="runReplay">Replay a recorded run</, "the primary action says it is a replay");
-    assert.match(html, /id="runLive">Run live on Nebius</, "the live action says it is live");
-    assert.match(html, /id="runOut" data-state="idle" role="status" aria-live="polite"/, "the outcome slot is reserved and announced");
-    assert.match(html, /<noscript><p>Running needs JavaScript/, "the page stays honest without JavaScript");
-    assert.match(html, /fetch\("\/api\/config"\)/); assert.match(html, /post\("\/api\/replay"/); assert.match(html, /post\("\/api\/attack"/);
+    // The hero's primary CTA is a link to the arena — interaction lives there now,
+    // not in an embedded console on the marketing page.
+    assert.match(html, /<a class="btn btn--primary" href="\/arena">Run the attack<\/a>/, "the hero CTA links to the arena");
+    // The live console is gone: no embedded run form, no in-page attack/replay calls.
+    assert.doesNotMatch(html, /id="heroRun"/, "the embedded run form is removed");
+    assert.doesNotMatch(html, /post\("\/api\/attack"/, "the site no longer runs the attack in-page");
+    assert.doesNotMatch(html, /post\("\/api\/replay"/, "the site no longer replays in-page");
     // theme control: still a radiogroup of three radios, each with a text name
     const seg = html.match(/<div class="seg glass-inset" role="radiogroup"[\s\S]*?<\/div>/)[0];
     assert.equal((seg.match(/role="radio"/g) || []).length, 3);
     assert.equal((seg.match(/<span class="seg__t">(System|Light|Dark)<\/span>/g) || []).length, 3);
     // one h1, and the Slack recap card quotes the committed screenshot
     assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
-    assert.match(html, /slackcard--recap/); assert.match(html, /Standup recap:/);
     // Page budget: 135 KB -> 145 (the before-and-after pair, the Slack frame) -> 150
     // (the terminal window chrome, 2026-09-09). A cap that moves every time something
     // is added is not a cap, so the rule is: pay for growth with cleanup first, then

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>No-Leak-MCP — Live dashboard</title>
+<title>No-Leak-MCP, Live dashboard</title>
 <meta name="description" content="What the No-Leak-MCP defences are doing right now: every guard decision, scorer verdict and eval run as it happens, and how often the attack gets through with the guard off and on." />
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#f5f6f9" media="(prefers-color-scheme: light)" />
@@ -19,7 +19,7 @@
 </script>
 <style>
 /* =============================================================================
-   No-Leak-MCP live dashboard — one page of the same product as site/index.html.
+   No-Leak-MCP live dashboard - one page of the same product as site/index.html.
    Same tokens, type scale, space scale and components (.site-header, .eyebrow,
    .stats, .table, .card, .btn, .pill, footer). Colour architecture is the
    site's: every colour token on bare :root (light), dark declared twice,
@@ -116,9 +116,9 @@ a { color:var(--accent); text-decoration:none; }
 a:hover { text-decoration:underline; text-underline-offset:3px; }
 code, .mono { font-family:var(--mono); font-size:var(--fs-xs); overflow-wrap:anywhere; }
 code { color:var(--accent); background:var(--accent-soft); padding:.1em .38em; border-radius:4px; }
-h1,h2,h3 { font-weight:400; margin:0; letter-spacing:-.01em; }
-h1 { font:400 var(--fs-h2)/1.1 var(--serif); }
-h1 em { font-style:italic; color:var(--brass); }
+h1,h2,h3 { margin:0; letter-spacing:-.022em; }
+h1 { font:600 var(--fs-h2)/1.1 var(--sans); }
+h1 em { font-style:normal; color:var(--accent); }
 /* section labels: the site's eyebrow, as a real heading so the outline holds */
 h2.eyebrow { margin:var(--s-6) 0 var(--s-3); }
 p { margin:0 0 1em; max-width:var(--measure); }
@@ -190,7 +190,7 @@ p { margin:0 0 1em; max-width:var(--measure); }
 
 /* ------------------------------ the defence switches (the site's .tog look) */
 /* Two real switches: opaque --panel fills with a --line-strong border, the
-   state carried by the words ("Guard is on — turn it off"), a dot AND the
+   state carried by the words ("Guard is on - turn it off"), a dot AND the
    border tone. Not glass: they sit on the page ground, they are content-layer
    controls, and an opaque control never buys its contrast down. */
 .switches { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 var(--s-3); }
@@ -301,7 +301,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
   <div class="page-head">
     <p class="eyebrow">Live dashboard</p>
     <h1>What the defences are doing <em>right now.</em></h1>
-    <p class="lede">Every guard decision, scorer verdict and eval run, as it happens — and how often the attack gets through with the guard off and on.</p>
+    <p class="lede">Every guard decision, scorer verdict and eval run, as it happens, and how often the attack gets through with the guard off and on.</p>
     <p class="status"><span id="conn" class="pill">connecting…</span><span>Events come from the arena and from the real <span class="mono">dsh</span> plugins; each row says which.</span></p>
   </div>
 
@@ -361,7 +361,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
 
   const esc = (v) => String(v==null?"":v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-  /* Liquid Glass runtime — identical to the site (§4a) and the arena. */
+  /* Liquid Glass runtime - identical to the site (§4a) and the arena. */
   (function initGlass() {
     const probe = document.createElement("div");
     probe.style.cssText = "position:absolute;left:-9999px;width:1px;height:1px;" +
@@ -393,7 +393,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
 
   // This one file is served from two origins: the Render service (beside the site
   // and the arena) and the Convex deployment's own .convex.site (uploaded as-is by
-  // Convex Static Hosting — see realtime/convex/convex.config.ts). The nav links are written
+  // Convex Static Hosting - see realtime/convex/convex.config.ts). The nav links are written
   // relative, which is right on Render and broken on Convex, where there is no
   // site and no arena. So on a .convex.site origin they point at the Render service.
   // ?site=<origin> overrides both (local testing, or any other host). The link to the
@@ -406,7 +406,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
   if (arenaHref) document.getElementById("arenaLink").href = arenaHref;
   const ls = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
   // Served from a deployment's .convex.site, read that SAME deployment's
-  // .convex.cloud — so a dev deployment shows dev data and prod shows prod, and the
+  // .convex.cloud - so a dev deployment shows dev data and prod shows prod, and the
   // page can never quietly display a different deployment than the one hosting it.
   const ownDeployment = onConvexSite ? "https://" + location.hostname.replace(/\.convex\.site$/, ".convex.cloud") : "";
   let url = q.get("url") || ownDeployment || ls.get("convexUrl") || "https://wary-herring-602.convex.cloud";
@@ -429,7 +429,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
     const gbtn = document.getElementById("guardBtn");
     client.onUpdate(anyApi.control.guardState, {}, (st) => {
       guardEnabled = !!st.enabled;
-      gbtn.textContent = guardEnabled ? "Guard is on — turn it off" : "Guard is off — turn it on";
+      gbtn.textContent = guardEnabled ? "Guard is on, turn it off" : "Guard is off, turn it on";
       gbtn.classList.toggle("is-on", guardEnabled);
       gbtn.classList.toggle("is-off", !guardEnabled);
     }, () => {});
@@ -444,7 +444,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
     const ibtn = document.getElementById("invBtn");
     client.onUpdate(anyApi.control.invariantState, {}, (st) => {
       invEnabled = !!st.enabled;
-      ibtn.textContent = invEnabled ? "Invariant is on — turn it off" : "Invariant is off — turn it on";
+      ibtn.textContent = invEnabled ? "Invariant is on, turn it off" : "Invariant is off, turn it on";
       ibtn.classList.toggle("is-on", invEnabled);
       ibtn.classList.toggle("is-off", !invEnabled);
     }, () => {});

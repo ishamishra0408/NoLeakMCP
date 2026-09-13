@@ -27,6 +27,9 @@ export default defineSchema({
     guard: v.optional(v.string()), // "on" | "off"
     delivered: v.optional(v.boolean()),
     unevaluable: v.optional(v.boolean()),
+    // play/attempt (the Fun Build wall) — technique only, never authored text
+    invariant: v.optional(v.string()), // "on" | "off"
+    result: v.optional(v.string()),    // the run outcome, e.g. "LEAKED" | "DENIED_BY_GUARD"
     // shared
     sample: v.optional(v.string()),
     session: v.optional(v.string()),

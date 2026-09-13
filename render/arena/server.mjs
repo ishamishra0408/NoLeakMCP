@@ -34,7 +34,7 @@ import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase } from "./arena-core.mjs";
+import { runAttack as realRunAttack, MODELS, DROP_PATH_RE, inspectDrop, normalizeBase, pickPublicBase, applyDropPlaceholder, DROP_PLACEHOLDER } from "./arena-core.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
 import { linkupSearch, normalizeHost, RESEARCH_SUBJECT } from "./linkup.mjs";
 import { investigateHost } from "./investigate.mjs";
@@ -98,6 +98,13 @@ export function createArenaServer(o = {}) {
   // balance, and it is deliberately unchanged: raising the per-IP number does
   // not raise the ceiling on a day's spend.
   const limiter = createRateLimiter({ perIpMax: 15, windowMs: 10 * 60 * 1000, globalDayMax: 200, now, dataDir: DATA_DIR });
+  // The /play page lets a visitor author the poison, which is the one abusable path
+  // to Nebius spend — so it carries its own tighter budget ON TOP of the shared one.
+  // The global 200/day ceiling in `limiter` stays the hard cap and is not raised;
+  // this only makes authored runs a thinner slice of it. Not persisted: a restart
+  // resetting the authored counter cannot exceed the shared cap that IS persisted.
+  const playLimiter = createRateLimiter({ perIpMax: 5, windowMs: 10 * 60 * 1000, globalDayMax: 60, now });
+  const POISON_MAX = 600;
 
   // -------------------------------------------------------------------------
   // Drop receipts (bounded, in-memory): runId -> { at, canary, how, sample }
@@ -199,6 +206,31 @@ export function createArenaServer(o = {}) {
     })());
     jobs.push(toCollector({ kind: "trial", ...t, source: SOURCE, runId }));
     await Promise.allSettled(jobs);
+  }
+
+  // One row on the /play live wall. TECHNIQUE ONLY — model, guard state, outcome,
+  // and the encoding the guard peeled (`how`). Never the visitor's authored text,
+  // never a URL. That is what keeps the wall un-moderatable and keeps the "attacker
+  // endpoint never republished" invariant true over this path by construction.
+  function pushPlayAttempt(result, modelKey, guard, invariant) {
+    const denial = result.events.find((e) => e.event === "guard/deny" || e.event === "invariant/deny");
+    const e = {
+      event: "play/attempt", source: "play", runId: result.transcriptId,
+      model: modelKey, guard: guard ? "on" : "off", invariant: invariant ? "on" : "off",
+      result: result.outcome, how: denial?.how || null,
+    };
+    convexMutation("ingest:ingestEvent", { e, key: keyOf({ ...e, kind: "play/attempt", callId: result.transcriptId }) });
+    // A canary that reaches the drop with the guard ON is a real detector bypass —
+    // a finding, not a game score. Record it so it surfaces honestly rather than
+    // being buried in a "you won" animation.
+    if (result.outcome === "LEAKED" && guard) {
+      const hit = result.events.find((e) => e.event === "exfil/hit");
+      const finding = {
+        event: "guard-bypass", source: "play", runId: result.transcriptId,
+        model: modelKey, how: hit?.how || null,
+      };
+      convexMutation("ingest:ingestEvent", { e: finding, key: keyOf({ ...finding, kind: "guard-bypass", callId: result.transcriptId }) });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -410,6 +442,17 @@ export function createArenaServer(o = {}) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         return res.end(INDEX_HTML);
       }
+      // /play and /arena are the same merged page now (Fun-Build + the tool in one).
+      if (p === "/play" || p === "/play/" || p === "/play/index.html") {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        return res.end(INDEX_HTML);
+      }
+      // The /play live wall, proxied so the page needs no Convex client. Technique
+      // only; the query itself returns no authored text.
+      if (p === "/api/play-wall" && req.method === "GET") {
+        const r = await convexQuery("metrics:playWall", { limit: 20 });
+        return json(res, 200, { wall: r.ok && Array.isArray(r.value) ? r.value : [] });
+      }
       if (p.startsWith("/assets/") && (req.method === "GET" || req.method === "HEAD")) {
         const a = siteAsset(p.slice("/assets/".length));
         if (!a) return json(res, 404, { error: "not found" });
@@ -557,16 +600,36 @@ export function createArenaServer(o = {}) {
         const guard = !!body.guard;
         const invariant = !!body.invariant;
 
+        // Authored poison (the /play page). Optional and backward-compatible: absent
+        // means the planted message, exactly as before. Validated entirely here —
+        // it becomes a tool RESULT the model reads, never HTML, and is never stored.
+        let poison = null, hadPlaceholder = true;
+        const authored = typeof body.poison === "string" && body.poison.trim() !== "";
+        if (authored) {
+          const clean = body.poison.replace(/[ --]/g, "").trim();
+          if (clean.length > POISON_MAX) return json(res, 400, { error: `Message too long (${clean.length}/${POISON_MAX}). Keep it short — a real Slack reply is.` });
+          // Passed through with {{DROP}} intact; runAttack resolves it to this run's
+          // own drop, so the message can reach nothing else. It becomes a tool RESULT
+          // the model reads — never HTML, never stored, never published.
+          poison = clean;
+          hadPlaceholder = clean.includes(DROP_PLACEHOLDER);
+          // Authored runs draw from a second, tighter budget as well as the shared one.
+          const pc = playLimiter.check(ip);
+          if (!pc.ok) return json(res, 429, { error: pc.reason, rate: playLimiter.state(ip) });
+          playLimiter.commit(ip, pc.arr);
+        }
+
         limiter.commit(ip, rc.arr); // count the run before we spend the tokens
         let result;
         try {
-          result = await runAttack({ modelKey, guard, invariant, apiKey: NEBIUS_KEY, dropUrl: DROP_BASE, fetchImpl, now });
+          result = await runAttack({ modelKey, guard, invariant, apiKey: NEBIUS_KEY, dropUrl: DROP_BASE, fetchImpl, now, ...(poison ? { poison } : {}) });
         } catch (err) {
           limiter.persist(ip, { model: modelKey, guard, invariant, outcome: "ERROR", error: String(err?.message || err) });
           return json(res, 500, { error: String(err?.message || err) });
         }
-        limiter.persist(ip, { model: modelKey, guard, invariant, outcome: result.outcome, transcriptId: result.transcriptId });
+        limiter.persist(ip, { model: modelKey, guard, invariant, outcome: result.outcome, transcriptId: result.transcriptId, authored });
         broadcast(result); // fire-and-forget to the shared planes
+        if (authored) pushPlayAttempt(result, modelKey, guard, invariant); // technique only, never the text
         rememberRun(result.transcriptId, result.outcome);
         const drop = DROP_HITS.get(result.transcriptId) || null;
         return json(res, 200, {
@@ -576,6 +639,7 @@ export function createArenaServer(o = {}) {
           drop: drop ? { received: true, canary: drop.canary, how: drop.how } : { received: false },
           verify: `/api/drop/${result.transcriptId}`,
           usage: result.usage,
+          authored, hadPlaceholder,
         });
       }
 

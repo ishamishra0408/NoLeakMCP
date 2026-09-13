@@ -52,6 +52,26 @@ export const latestFindingForHost = query({
   },
 });
 
+/**
+ * The Fun Build wall (/play): recent authored attempts, newest first. Technique
+ * only — model, guard/invariant state, outcome and the encoding the guard peeled.
+ * Never any authored text (it is not stored). Reads via by_kind, bounded.
+ */
+export const playWall = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const rows = await ctx.db
+      .query("events")
+      .withIndex("by_kind", (q) => q.eq("kind", "play/attempt"))
+      .order("desc")
+      .take(Math.min(limit ?? 20, 50));
+    return rows.map((e) => ({
+      ts: e.ts, model: e.model ?? null, guard: e.guard ?? null,
+      invariant: e.invariant ?? null, result: e.result ?? null, how: e.how ?? null,
+    }));
+  },
+});
+
 /** Rollup counters for the header tiles. */
 export const summary = query({
   args: {},

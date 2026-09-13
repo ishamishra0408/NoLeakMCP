@@ -33,6 +33,11 @@ export const ingestEvent = mutation({
       callId: e.callId ?? undefined,
       source: e.source ?? undefined,
       runId: e.runId ?? undefined,
+      // play/attempt (Fun Build wall) — technique only
+      model: typeof e.model === "string" ? e.model : undefined,
+      guard: typeof e.guard === "string" ? e.guard : undefined,
+      invariant: typeof e.invariant === "string" ? e.invariant : undefined,
+      result: typeof e.result === "string" ? e.result : undefined,
       key: key ?? undefined,
     });
   },
