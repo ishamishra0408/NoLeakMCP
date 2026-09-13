@@ -1,0 +1,142 @@
+{
+    "host": "beeceptor.com",
+    "outcome": "LEAKED",
+    "runId": "fixture:nemotron-open",
+    "identity": {
+        "service_type": "request_capture",
+        "operator": "Beeceptor",
+        "free_signup": null,
+        "summary": "Beeceptor is an HTTP proxy and API mocking tool that allows users to create endpoints with unique URLs to capture, inspect, and manipulate HTTP requests sent to it."
+    },
+    "identityConfidence": "sourced",
+    "claimKind": "exposure",
+    "claim": true,
+    "verdict": "EXPOSED",
+    "severity": "critical",
+    "confidence": "confirmed",
+    "action": "Rotate it now and assume it is public: it landed at a place where others can read what is sent.",
+    "couldNotConfirm": [],
+    "steps": [
+        {
+            "kind": "recall",
+            "q": null,
+            "filter": null,
+            "sources": [],
+            "why": "A stored finding for this host is under 24 hours old and was sourced, so it replaces the identify search.",
+            "result": "Beeceptor: request capture"
+        },
+        {
+            "kind": "exposure",
+            "q": "On beeceptor.com, who can see the HTTP requests or data sent to a free endpoint, and can anyone create such an endpoint without signing up?",
+            "filter": {
+                "includeDomains": [
+                    "beeceptor.com"
+                ]
+            },
+            "sources": [
+                {
+                    "name": "Terms Of Service - Beeceptor",
+                    "url": "https://beeceptor.com/pages/terms-of-service/",
+                    "site": "beeceptor.com"
+                },
+                {
+                    "name": "Privacy Policy - Beeceptor",
+                    "url": "https://beeceptor.com/pages/privacy/index.html",
+                    "site": "beeceptor.com"
+                },
+                {
+                    "name": "Terms Of Service - Beeceptor",
+                    "url": "https://beeceptor.com/pages/terms-of-service/index.html",
+                    "site": "beeceptor.com"
+                },
+                {
+                    "name": "Privacy Policy - Beeceptor",
+                    "url": "https://beeceptor.com/pages/privacy/",
+                    "site": "beeceptor.com"
+                },
+                {
+                    "name": "Frequently Asked Questions about Beeceptor - API Mock Server",
+                    "url": "https://beeceptor.com/faq/",
+                    "site": "beeceptor.com"
+                }
+            ],
+            "why": "It is a request capture service, so the question that decides severity is who can read what is sent to it \u2014 asked of its own site first.",
+            "result": "others can read what is sent \u2014 \"The free endpoints are public, and anyone having link to it can intercept and view requests, headers, payload, etc. The dashboard shows how many users are currently connected.\""
+        },
+        {
+            "kind": "corroborate",
+            "q": "On beeceptor.com, who can see the HTTP requests or data sent to a free endpoint, and can anyone create such an endpoint without signing up?",
+            "filter": {
+                "excludeDomains": [
+                    "beeceptor.com"
+                ]
+            },
+            "sources": [
+                {
+                    "name": "Beeceptor - Free Public APIs for Developers",
+                    "url": "https://openpublicapis.com/api/beeceptor",
+                    "site": "openpublicapis.com"
+                },
+                {
+                    "name": "HTTP Connector \u2013 | Cobalt",
+                    "url": "https://docs.cobalt.io/integrations/integrationbuilder/how-to-guides/http/",
+                    "site": "docs.cobalt.io"
+                },
+                {
+                    "name": "Beeceptor: The Free APIs And Data Server - Find Free For Dev",
+                    "url": "https://findfree.org/resource/beeceptor",
+                    "site": "findfree.org"
+                },
+                {
+                    "name": "Beeceptor Reviews, Ratings & Features 2026 | Gartner Peer Insights",
+                    "url": "https://www.gartner.com/reviews/market/api-generation-software/vendor/beeceptor",
+                    "site": "gartner.com"
+                },
+                {
+                    "name": "Testing Device Manager Connectors and Location Engine Forwarders Using 3rd party tools. - ",
+                    "url": "https://support.digitalmatter.com/testing-device-manager-connectors-and-location-engine-forwarders-using-3rd-party-tools",
+                    "site": "support.digitalmatter.com"
+                }
+            ],
+            "result": "Agrees: others can read what is sent \u2014 \"The search results indicate that Beeceptor creates public endpoints accessible to anyone, and requests can be sent to a created mock endpoint without authentication, but to create/manage endpoints and access account features, a user must sign in to Beeceptor.\"",
+            "why": "The finding rests on the host's own pages or a single other site, so ask the same question with the host's site excluded."
+        }
+    ],
+    "sources": [
+        {
+            "name": "Terms Of Service - Beeceptor",
+            "url": "https://beeceptor.com/pages/terms-of-service/",
+            "site": "beeceptor.com"
+        },
+        {
+            "name": "Privacy Policy - Beeceptor",
+            "url": "https://beeceptor.com/pages/privacy/index.html",
+            "site": "beeceptor.com"
+        },
+        {
+            "name": "Terms Of Service - Beeceptor",
+            "url": "https://beeceptor.com/pages/terms-of-service/index.html",
+            "site": "beeceptor.com"
+        },
+        {
+            "name": "Privacy Policy - Beeceptor",
+            "url": "https://beeceptor.com/pages/privacy/",
+            "site": "beeceptor.com"
+        },
+        {
+            "name": "Frequently Asked Questions about Beeceptor - API Mock Server",
+            "url": "https://beeceptor.com/faq/",
+            "site": "beeceptor.com"
+        },
+        {
+            "name": "Beeceptor - Free Public APIs for Developers",
+            "url": "https://openpublicapis.com/api/beeceptor",
+            "site": "openpublicapis.com"
+        }
+    ],
+    "calls": 2,
+    "reused": 1789291324486,
+    "at": 1789293457084,
+    "cached": true,
+    "note": "Linkup never decides the block. It decides how bad the incident is and what you do next."
+}

@@ -559,7 +559,7 @@ details.steps[open] > summary::before { content:"▾ "; }
       </label>
       <button class="btn btn--primary" type="button" id="replay">Replay a recorded run</button>
       <button class="btn glass-inset" type="button" id="launch">Run live on Nebius</button>
-      <p class="run__cost" id="rate">Replay is instant and free. Live spends about six model calls: ~10 s on Nemotron. Llama queues and can time out. Six live runs per address per 10 minutes.</p>
+      <p class="run__cost" id="rate">Replay is instant and free. Live runs on Nemotron (~10 s), six per address per 10 minutes. Llama 3.3 70B is replay-only.</p>
     </div>
   </section>
 
@@ -690,7 +690,7 @@ details.steps[open] > summary::before { content:"▾ "; }
     ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.6 20.4 6v6.1c0 5.3-3.5 9.4-8.4 11.2C7.1 21.5 3.6 17.4 3.6 12.1V6Z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.5"/></svg>',
     amber: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5M12 16h.01"/></svg>'
   };
-  let liveEnabled = false;
+  let liveEnabled = false, lastRate = null;
 
   function word(tone, text, busy) {
     $("verdictCard").setAttribute("data-tone", tone || "");
@@ -799,7 +799,9 @@ details.steps[open] > summary::before { content:"▾ "; }
 
   function setRate(r) {
     if (!r) return;
-    $("rate").textContent = `Replay is instant and free. Live spends about six model calls: ~10 s on Nemotron. Llama queues and can time out. ${r.perIpUsed} of ${r.perIpMax} live runs used from this address in the last 10 minutes.`;
+    lastRate = r;
+    if ($("model") && $("model").value === "llama") return;   // llama shows its own note
+    $("rate").textContent = `Replay is instant and free. Live runs on Nemotron (~10 s). Llama 3.3 70B is replay-only, it queues on Nebius. ${r.perIpUsed} of ${r.perIpMax} live runs used from this address in the last 10 minutes.`;
   }
   function liveOff(why) { $("launch").disabled = true; $("launch").textContent = "Live runs unavailable"; $("rate").textContent = "Replay is instant and free. " + why; }
 
@@ -824,10 +826,25 @@ details.steps[open] > summary::before { content:"▾ "; }
     if (q.has("guard")) $("guard").checked = /^(on|1|true)$/i.test(q.get("guard"));
     if (q.has("invariant")) $("invariant").checked = /^(on|1|true)$/i.test(q.get("invariant"));
     if (!liveEnabled) liveOff("Live runs are off on this deployment (no API key).");
+    syncLive();
   }
+
+  // Llama 3.3 70B queues on Nebius and can time out, so it is replay-only here:
+  // live runs on Nemotron only. Recorded Llama runs stay available under Replay.
+  function syncLive() {
+    if (!liveEnabled) return;
+    const llama = $("model") && $("model").value === "llama";
+    $("launch").disabled = !!llama;
+    $("launch").title = llama ? "Llama 3.3 70B is replay-only here — it queues on Nebius and can time out. Pick a recorded Llama run under Replay." : "";
+    if (llama) $("rate").textContent = "Llama 3.3 70B queues on Nebius and can time out, so live is off for it here. Switch to Nemotron for a live run (~10 s), or pick a recorded Llama run in Replay.";
+    else if (lastRate) setRate(lastRate);
+    else $("rate").textContent = "Replay is instant and free. Live runs on Nemotron (~10 s), six per address per 10 minutes. Llama 3.3 70B is replay-only.";
+  }
+  if ($("model")) $("model").addEventListener("change", syncLive);
 
   $("launch").onclick = async () => {
     actx(); // the click is the autoplay-unlock gesture
+    if ($("model") && $("model").value === "llama") { $("result").hidden = false; word("amber", "Replay only", false); $("otxt").textContent = "Llama 3.3 70B queues on Nebius and can time out, so live is off for it here. Switch to Nemotron, or pick a recorded Llama run in Replay."; return; }
     if (authoring && poison && poison.value.length > 600) { word("amber", "Too long", false); $("otxt").textContent = "Keep it under 600 characters. A real Slack reply is short."; return; }
     $("launch").disabled = true; $("replay").disabled = true;
     $("result").hidden = false; $("timeline").innerHTML = ""; $("mode").hidden = true; $("foot").textContent = "";
@@ -848,7 +865,7 @@ details.steps[open] > summary::before { content:"▾ "; }
       }
       render(data, "live"); setRate(data.rate);
     } catch (e) { setScene("neutral", "…"); word("amber", "The live run failed", false); $("otxt").textContent = String(e) + " Replay still works."; }
-    finally { $("launch").disabled = !liveEnabled; $("replay").disabled = false; }
+    finally { syncLive(); $("replay").disabled = false; }
   };
 
   $("replay").onclick = async () => {
