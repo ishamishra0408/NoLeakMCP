@@ -352,7 +352,7 @@ textarea#poison:focus { outline:2px solid var(--focus); outline-offset:1px; }
 /* ===================== the dramatic heist modal ===================== */
 .modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:var(--s-4); }
 .modal[hidden] { display:none !important; }
-.modal .backdrop { position:absolute; inset:0; background:rgba(4,6,10,.72); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); animation:fadein .28s ease; }
+.modal .backdrop { position:absolute; inset:0; background:rgba(4,6,10,.94); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); animation:fadein .28s ease; }
 .modalcard { position:relative; width:min(680px, 96vw); max-height:90vh; overflow-y:auto; background:var(--panel); border:1px solid var(--line); border-radius:calc(var(--r) + 6px); box-shadow:0 40px 120px rgba(0,0,0,.6); padding:var(--s-5); animation:modalin .42s cubic-bezier(.2,1.1,.35,1); }
 .macts { display:flex; gap:var(--s-2); justify-content:center; flex-wrap:wrap; margin-top:var(--s-4); }
 .mtranscript { text-align:left; margin-top:var(--s-4); padding-top:var(--s-4); border-top:1px solid var(--line); }
@@ -854,7 +854,7 @@ details.steps[open] > summary::before { content:"▾ "; }
   $("replay").onclick = async () => {
     actx(); // unlock audio on the gesture
     $("replay").disabled = true;
-    $("result").hidden = false; openModal(); setScene("wait", "gimme the key…"); modalRunning("Replaying a recorded run. No model call."); word(null, "Replaying…", true); $("otxt").textContent = "";
+    $("result").hidden = false; $("timeline").innerHTML = ""; $("mode").hidden = true; $("foot").textContent = ""; $("vPlain").textContent = ""; openModal(); setScene("wait", "gimme the key…"); modalRunning("Replaying a recorded run. No model call."); word(null, "Replaying…", true); $("otxt").textContent = "";
     try {
       const r = await fetch("/api/replay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: $("fixture").value }) });
       const data = await r.json();
