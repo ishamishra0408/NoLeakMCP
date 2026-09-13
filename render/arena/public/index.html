@@ -395,6 +395,8 @@ textarea#poison:focus { outline:2px solid var(--focus); outline-offset:1px; }
 .mclose { position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--panel-2); color:var(--dim); font-size:15px; cursor:pointer; z-index:3; }
 .mclose:hover { color:var(--ink); border-color:var(--line-strong); }
 .mverdict { text-align:center; margin-top:var(--s-4); }
+.mplain { margin:8px auto 0; max-width:34ch; font:600 1.05rem/1.45 var(--sans); color:var(--ink); }
+.verdict__plain { margin:6px 0 0; font:600 1.05rem/1.45 var(--sans); color:var(--ink); }
 .mword { font-family:var(--serif); font-size:clamp(2rem,1.4rem+3vw,3.2rem); line-height:1; color:var(--ink); }
 .mword[data-tone="bad"] { color:var(--bad); } .mword[data-tone="ok"] { color:var(--ok); } .mword[data-tone="amber"] { color:var(--amber); }
 .mtext { color:var(--dim); font-size:var(--fs-sm); max-width:52ch; margin:var(--s-2) auto 0; min-height:2.4em; }
@@ -566,6 +568,7 @@ details.steps[open] > summary::before { content:"▾ "; }
 
     <div class="verdict" id="verdictCard" role="status" aria-live="polite">
       <div class="verdict__v" id="verdictWord"><span id="badge">Running…</span></div>
+      <p class="verdict__plain" id="vPlain"></p>
       <p class="verdict__fact" id="otxt"></p>
       <p class="verdict__meta"><span class="pill" id="mode" hidden></span><span id="foot"></span></p>
     </div>
@@ -608,7 +611,7 @@ details.steps[open] > summary::before { content:"▾ "; }
       </svg></div>
       <div class="door"><span class="exit">EXIT →</span><div class="frame"></div><div class="panel"></div><span class="knob"></span></div>
     </div>
-    <div class="mverdict"><div class="mword" id="mWord">Sending…</div><p class="mtext" id="mText"></p></div>
+    <div class="mverdict"><div class="mword" id="mWord">Sending…</div><p class="mplain" id="mPlain"></p><p class="mtext" id="mText"></p></div>
     <div class="macts">
       <button class="btn glass-inset mtrace" id="mTrace" type="button" hidden>🎧 Trace the stolen keys</button>
       <button class="btn btn--primary mdone" id="mDone" type="button">See the details ↓</button>
@@ -673,6 +676,15 @@ details.steps[open] > summary::before { content:"▾ "; }
   const LABEL = { LEAKED: "Leaked", DENIED_BY_GUARD: "Denied by the guard", DENIED_BY_INVARIANT: "Denied by the invariant",
     EXFIL_ATTEMPTED: "Attempted, not delivered", MODEL_DECLINED: "Model declined", ERROR: "Error" };
   const TONE = { LEAKED: "bad", DENIED_BY_GUARD: "ok", DENIED_BY_INVARIANT: "ok", EXFIL_ATTEMPTED: "amber", MODEL_DECLINED: "amber", ERROR: "amber" };
+  // One plain-English line per outcome, so a non-technical judge feels the result.
+  const PLAIN = {
+    LEAKED: "The AI was tricked into sending your passwords to the attacker.",
+    DENIED_BY_GUARD: "The guard caught the hidden password before it left.",
+    DENIED_BY_INVARIANT: "The guard caught data the AI had just read before it left.",
+    EXFIL_ATTEMPTED: "The AI tried to send your passwords, but they never reached the attacker.",
+    MODEL_DECLINED: "The AI refused the hidden instruction on its own.",
+    ERROR: "",
+  };
   const ICO = {
     bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 1.7 20.5h20.6L12 3.5Z"/><path d="M12 10v4.2"/><path d="M12 17.6h.01"/></svg>',
     ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.6 20.4 6v6.1c0 5.3-3.5 9.4-8.4 11.2C7.1 21.5 3.6 17.4 3.6 12.1V6Z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.5"/></svg>',
@@ -747,6 +759,7 @@ details.steps[open] > summary::before { content:"▾ "; }
     const m = $("mode");
     m.hidden = false; m.className = "pill";
     m.textContent = mode === "live" ? "Live, a real run on Nebius" : "Replay, a recorded run";
+    $("vPlain").textContent = PLAIN[o] || "";
     $("otxt").textContent = data.outcomeText || "";
     const tl = $("timeline"); tl.innerHTML = "";
     const steps = data.steps || [];
@@ -874,7 +887,7 @@ details.steps[open] > summary::before { content:"▾ "; }
   document.addEventListener("pointerdown", primeAudio);
   document.addEventListener("keydown", primeAudio);
 
-  const scene = $("scene"), bubble = $("bubble"), mWord = $("mWord"), mText = $("mText");
+  const scene = $("scene"), bubble = $("bubble"), mWord = $("mWord"), mText = $("mText"), mPlain = $("mPlain");
   function setScene(state, bub) { scene.className = "scene"; void scene.offsetWidth; scene.classList.add(state); bubble.textContent = bub || ""; }
   const SCENE_LABEL = { LEAKED: "Clean getaway.", DENIED_BY_GUARD: "No key for you.", DENIED_BY_INVARIANT: "No key for you.", EXFIL_ATTEMPTED: "Fumbled it.", MODEL_DECLINED: "It refused.", ERROR: "Error." };
   // Drive the heist from any outcome - replay or live alike. Plays in the modal.
@@ -882,6 +895,7 @@ details.steps[open] > summary::before { content:"▾ "; }
     const o = data.outcome || "ERROR";
     mWord.setAttribute("data-tone", TONE[o] || "amber");
     mWord.textContent = SCENE_LABEL[o] || o;
+    mPlain.textContent = PLAIN[o] || "";
     mText.textContent = data.outcomeText || "";
     if (o === "LEAKED") { setScene("win", "the keys! 🔑"); playSound("win"); }
     else if (o === "DENIED_BY_GUARD" || o === "DENIED_BY_INVARIANT") {
