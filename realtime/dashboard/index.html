@@ -168,6 +168,34 @@ p { margin:0 0 1em; max-width:var(--measure); }
 /* ---------------------------------------------------------- page header */
 .page-head { padding:var(--s-6) 0 var(--s-4); }
 .page-head h1 { max-width:22ch; margin-bottom:var(--s-4); }
+/* the cute button that opens the investigations dialog */
+.invbtn-wrap { text-align:left; margin:var(--s-3) 0 0; }
+.invbtn { display:inline-flex; align-items:center; gap:10px; padding:11px 18px; border:1px solid var(--line-strong); border-radius:999px; background:var(--panel); color:var(--ink); font:600 var(--fs-sm) var(--sans); cursor:pointer; transition:border-color .2s ease, background .2s ease, transform .1s ease; }
+.invbtn:hover:not(:disabled) { border-color:var(--brass-line); background:var(--panel-2); }
+.invbtn:active:not(:disabled) { transform:translateY(1px); }
+.invbtn:disabled { opacity:.5; cursor:default; }
+.invbtn__ico { display:inline-flex; line-height:1; }
+.invbtn__ico .linkup-mark { width:20px; height:auto; display:block; }
+.invbtn__count { min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--brass); color:#0b0e14; font:700 var(--fs-xs)/1 var(--mono); display:inline-grid; place-items:center; }
+.invdlg { width:min(560px, 92vw); max-height:85vh; border:1px solid var(--line); border-radius:16px; background:var(--panel); color:var(--ink); padding:0; box-shadow:0 40px 120px rgba(0,0,0,.55); }
+.invdlg::backdrop { background:rgba(0,0,0,.6); }
+.invdlg__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
+.invdlg__head h3 { margin:0; font:600 var(--fs-lg)/1.2 var(--sans); }
+.invdlg__x { border:0; background:transparent; color:var(--dim); font-size:1.15rem; line-height:1; cursor:pointer; padding:4px; }
+.invdlg__x:hover { color:var(--ink); }
+.invdlg__body { padding:16px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.invdlg__foot { margin:0; padding:12px 20px 16px; border-top:1px solid var(--line); font-size:var(--fs-xs); color:var(--dim); text-align:center; }
+.invdlg__foot b { color:var(--ink); }
+.invcard { border:1px solid var(--line); border-radius:12px; padding:14px; background:var(--panel-2); text-align:left; }
+.invcard__top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.invcard__host { font:600 var(--fs-sm) var(--mono); color:var(--ink); word-break:break-all; }
+.invcard__badge { margin-left:auto; font:700 var(--fs-xs)/1 var(--mono); letter-spacing:.06em; text-transform:uppercase; padding:5px 9px; border-radius:6px; border:1px solid transparent; }
+.invcard__badge--bad { background:color-mix(in srgb, var(--bad) 15%, transparent); color:var(--bad); border-color:color-mix(in srgb, var(--bad) 40%, transparent); }
+.invcard__badge--ok { background:color-mix(in srgb, var(--ok) 15%, transparent); color:var(--ok); border-color:color-mix(in srgb, var(--ok) 40%, transparent); }
+.invcard__action { margin:9px 0 0; font-size:var(--fs-sm); color:var(--ink); line-height:1.5; }
+.invcard__meta { margin:7px 0 0; font-size:var(--fs-xs); color:var(--dim); font-family:var(--mono); }
+.invcard__src { margin:7px 0 0; font-size:var(--fs-xs); color:var(--dim); }
+.invcard__src a { color:var(--accent); }
 .page-head .lede { margin-bottom:var(--s-3); }
 .status { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:var(--fs-sm); color:var(--dim); }
 
@@ -300,17 +328,9 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
 <div class="wrap">
   <div class="page-head">
     <p class="eyebrow">Live dashboard</p>
-    <h1>What the defences are doing <em>right now.</em></h1>
-    <p class="lede">Every guard decision, scorer verdict and eval run, as it happens, and how often the attack gets through with the guard off and on.</p>
-    <p class="status"><span id="conn" class="pill">connecting…</span><span>Events come from the arena and from the real <span class="mono">dsh</span> plugins; each row says which.</span></p>
+    <h1>What Our Solutions <em>Bring in?</em></h1>
+    <p class="status"><span>Events come from the arena and from the real <span class="mono">dsh</span> plugins; each row says which.</span></p>
   </div>
-
-  <h2 class="eyebrow" id="switchesLabel">Defence switches</h2>
-  <div class="switches" id="guardctl" role="group" aria-labelledby="switchesLabel">
-    <button id="guardBtn" class="switch" type="button">connecting…</button>
-    <button id="invBtn" class="switch" type="button">connecting…</button>
-  </div>
-  <p class="small dim">A change reaches the harness in about two seconds, no restart. The guard stops the planted decoy from being sent; the invariant stops anything the agent read earlier from being sent, tag or no tag.</p>
 
   <div id="setup" class="card" hidden>
     <p class="small">Paste your Convex deployment URL (from <code>npx convex dev</code>, e.g. <code>https://xxxx.convex.cloud</code>):</p>
@@ -321,24 +341,26 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
     <p class="small dim" style="margin:10px 0 0">Stored in this browser only.</p>
   </div>
 
-  <h2 class="eyebrow">Totals</h2>
+  <h2 class="eyebrow">Event Tracker</h2>
   <div class="stats" id="tiles" style="margin-top:0"></div>
 
-  <h2 class="eyebrow">Attack success rate</h2>
-  <p class="small dim">How often the decoy secret reached the attacker's server, out of the runs that could be judged, with the guard off and on. <b>blocked</b> is how many sends the guard itself stopped, kept separate from runs where the model refused on its own.</p>
-  <div class="table table--matrix"><table id="matrix">
-    <caption class="vh">Attack success rate by victim model and attack style, guard off and on.</caption>
-    <thead><tr><th scope="col">victim</th><th scope="col">style</th><th scope="col">guard off</th><th scope="col">guard on</th><th scope="col">blocked</th></tr></thead>
-    <tbody><tr><td colspan="5" class="muted">waiting for data…</td></tr></tbody>
-  </table></div>
-
   <h2 class="eyebrow">Exposure investigations</h2>
-  <p class="small dim">After a run in the arena, or for an address typed on the site, Linkup investigates where the credential was headed: up to three searches, each chosen from what the last one found, stored here and reused by the next investigation. The block never depends on it. The incident verdict does.</p>
-  <div class="table table--inv"><table id="findings">
-    <caption class="vh">Recent exposure investigations, newest first.</caption>
-    <thead><tr><th scope="col">destination</th><th scope="col">run</th><th scope="col">verdict</th><th scope="col">confidence</th><th scope="col">searches</th><th scope="col">sources</th></tr></thead>
-    <tbody><tr><td colspan="6" class="muted">waiting…</td></tr></tbody>
-  </table></div>
+  <p class="small dim">After a run in the arena, or for an address typed on the site, Linkup investigates where the credential was headed. The block never depends on it. The incident verdict does.</p>
+  <div class="invbtn-wrap">
+    <button id="invOpen" class="invbtn" type="button" disabled>
+      <span class="invbtn__ico" aria-hidden="true"><svg viewBox="0 0 285 198" class="linkup-mark" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M96.1153 0C115.145 9.96246e-05 131.026 8.72414 143.978 22.1662C149.579 27.9789 154.673 34.7119 159.303 42.0916C177.404 34.9414 195.406 32.5434 211.123 39.016C225.943 45.1194 234.458 56.0167 238.15 69.3667C241.755 82.4004 240.712 97.5027 237.317 112.551C236.123 117.841 234.62 123.193 232.884 128.536C239.707 128.029 246.056 127.795 251.797 127.879C260.507 128.006 268.207 128.866 274.116 130.847C285.12 134.535 288.65 148.138 280.65 156.687C275.381 162.319 266.383 168.603 253.035 175.39C239.593 182.225 221.386 189.745 197.367 197.701C195.644 198.272 193.756 198.015 192.246 197.006C190.737 195.996 189.774 194.345 189.635 192.53C188.645 179.559 186.69 163.856 183.595 147.175C172.198 149.244 160.331 151.672 148.311 154.368C94.6619 166.396 38.6478 183.583 8.34971 197.465C6.49768 198.314 4.34053 198.144 2.64306 197.016C0.945589 195.888 -0.0526946 193.96 0.0021483 191.918C0.84773 160.512 6.41469 113.301 20.5188 73.735C27.5677 53.9608 36.888 35.6927 49.1507 22.2785C61.5163 8.75168 77.0563 0 96.1153 0ZM251.626 139.722C244.9 139.624 237.119 139.996 228.507 140.784C222.883 155.254 215.916 169.209 209.107 181.111C225.195 175.287 237.886 169.815 247.704 164.823C260.564 158.284 268.153 152.74 272.049 148.577C274.097 146.388 273.296 143.061 270.379 142.083C266.169 140.672 259.884 139.843 251.626 139.722ZM154.363 57.2032C134.146 67.0213 112.683 83.0036 92.5185 101.014C72.3972 118.986 53.7959 138.772 39.3029 155.979C31.9268 164.737 25.7098 172.713 20.9227 179.37C53.5158 166.719 100.651 152.916 145.739 142.807C157.803 140.102 169.756 137.653 181.28 135.558C177.168 116.252 171.54 96.2054 164.138 77.9653C161.166 70.6416 157.928 63.6647 154.419 57.1756C154.401 57.1846 154.382 57.1941 154.363 57.2032ZM215.189 142.245C208.813 143.05 202.133 144.03 195.225 145.164C197.088 155.218 198.539 164.912 199.629 173.886C205.045 164.31 210.498 153.477 215.189 142.245ZM96.1153 11.8456C81.0934 11.8456 68.524 18.6064 57.8453 30.2879C47.0636 42.0821 38.4043 58.7186 31.6286 77.7264C21.0555 107.387 15.4078 141.843 13.0465 170.111C17.8505 163.568 23.6922 156.167 30.2916 148.331C45.0869 130.766 64.0751 110.564 84.6755 92.164C104.969 74.0389 127.049 57.4622 148.392 46.9482C144.399 40.7546 140.104 35.1838 135.496 30.4012C124.159 18.635 111.166 11.8457 96.1153 11.8456ZM206.644 49.9744C195.25 45.282 181.19 46.4708 165.297 52.4684C168.864 59.1583 172.114 66.222 175.066 73.4961C182.82 92.6035 188.671 113.5 192.918 133.539C202.399 131.977 211.495 130.692 220.013 129.743C222.352 123.112 224.336 116.453 225.807 109.934C228.997 95.8018 229.646 82.8969 226.78 72.5356C224.002 62.4906 217.886 54.6042 206.644 49.9744Z"/></svg></span>
+      <span>View the Linkup investigations</span>
+      <span class="invbtn__count" id="invCount" hidden></span>
+    </button>
+  </div>
+  <dialog id="invDialog" class="invdlg" aria-label="Exposure investigations">
+    <div class="invdlg__head">
+      <h3>Where the credentials were headed</h3>
+      <button id="invClose" class="invdlg__x" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="invdlg__body" id="invList"></div>
+    <p class="invdlg__foot">Traced with <b>Linkup</b>. It decides how bad the incident is, never the block.</p>
+  </dialog>
 
   <h2 class="eyebrow">Live event feed</h2>
   <div class="table table--feed"><table id="feed"><caption class="vh">The most recent events, newest first.</caption><tbody><tr><td class="muted">waiting…</td></tr></tbody></table></div>
@@ -410,50 +432,17 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
   // page can never quietly display a different deployment than the one hosting it.
   const ownDeployment = onConvexSite ? "https://" + location.hostname.replace(/\.convex\.site$/, ".convex.cloud") : "";
   let url = q.get("url") || ownDeployment || ls.get("convexUrl") || "https://wary-herring-602.convex.cloud";
-  const conn = document.getElementById("conn");
   const setup = document.getElementById("setup");
   document.getElementById("save").onclick = () => {
     const v = document.getElementById("url").value.trim();
     if (v) { ls.set("convexUrl", v); location.search = "?url=" + encodeURIComponent(v); }
   };
-  if (!url) { setup.hidden = false; conn.textContent = "no URL"; }
+  if (!url) { setup.hidden = false; }
   else start(url);
 
   function start(u) {
     let client;
-    try { client = new ConvexClient(u); } catch (e) { conn.textContent = "bad URL"; conn.className = "pill pill--bad"; setup.hidden = false; return; }
-    conn.textContent = "live · " + u.replace(/^https?:\/\//, "");
-    conn.className = "pill pill--ok";
-
-    let guardEnabled = null;
-    const gbtn = document.getElementById("guardBtn");
-    client.onUpdate(anyApi.control.guardState, {}, (st) => {
-      guardEnabled = !!st.enabled;
-      gbtn.textContent = guardEnabled ? "Guard is on, turn it off" : "Guard is off, turn it on";
-      gbtn.classList.toggle("is-on", guardEnabled);
-      gbtn.classList.toggle("is-off", !guardEnabled);
-    }, () => {});
-    gbtn.onclick = async () => {
-      if (guardEnabled === null) return;
-      gbtn.disabled = true;
-      try { await client.mutation(anyApi.control.setGuard, { enabled: !guardEnabled }); } catch (e) {}
-      setTimeout(() => (gbtn.disabled = false), 400);
-    };
-
-    let invEnabled = null;
-    const ibtn = document.getElementById("invBtn");
-    client.onUpdate(anyApi.control.invariantState, {}, (st) => {
-      invEnabled = !!st.enabled;
-      ibtn.textContent = invEnabled ? "Invariant is on, turn it off" : "Invariant is off, turn it on";
-      ibtn.classList.toggle("is-on", invEnabled);
-      ibtn.classList.toggle("is-off", !invEnabled);
-    }, () => {});
-    ibtn.onclick = async () => {
-      if (invEnabled === null) return;
-      ibtn.disabled = true;
-      try { await client.mutation(anyApi.control.setInvariant, { enabled: !invEnabled }); } catch (e) {}
-      setTimeout(() => (ibtn.disabled = false), 400);
-    };
+    try { client = new ConvexClient(u); } catch (e) { setup.hidden = false; return; }
 
     client.onUpdate(anyApi.metrics.summary, {}, (s) => {
       const t = [["events", s.total], ["sends stopped by the guard", s.denies], ["messages scored", s.verdicts],
@@ -463,32 +452,34 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); marg
         `<div class="stat"><span class="stat__n">${n ?? 0}</span><span class="stat__l">${l}</span></div>`).join("");
     }, () => {});
 
-    client.onUpdate(anyApi.metrics.cells, {}, (rows) => {
-      const byMS = {};
-      for (const r of rows) { (byMS[`${r.model}|${r.style}`] ??= {})[r.guard] = r; }
-      const body = Object.keys(byMS).sort().map((k) => {
-        const [model, style] = k.split("|"); const off = byMS[k].off, on = byMS[k].on;
-        const cell = (r, cls) => r ? `<span class="asr ${cls}">${r.asr.toFixed(2)}</span> <span class="muted">(${r.delivered}/${r.evaluable})</span>` : `<span class="asr na">n/a</span>`;
-        return `<tr><td>${esc(model)}</td><td>${esc(style)}</td><td>${cell(off, "off")}</td><td>${cell(on, "on")}</td><td>${on ? on.denied : "-"}</td></tr>`;
-      }).join("");
-      document.querySelector("#matrix tbody").innerHTML = body || `<tr><td colspan="5" class="muted">no trials yet</td></tr>`;
-    }, () => {});
-
     const RUN = (o) => !o ? "what-if lookup" : o === "LEAKED" ? "leaked" : o.indexOf("DENIED") === 0 ? "blocked" : o.toLowerCase().replace(/_/g, " ");
     const SEV = { critical: "leak", high: "leak", medium: "verdict", low: "deny" };
     const STEP = { recall: "memory", identify: "identify", exposure: "who can read it", abuse: "abuse reports", gap: "who could read it", corroborate: "independent check" };
-    const findingsBody = document.querySelector("#findings tbody");
+    const invOpen = document.getElementById("invOpen");
+    const invList = document.getElementById("invList");
+    const invCount = document.getElementById("invCount");
+    const invDialog = document.getElementById("invDialog");
+    document.getElementById("invClose").onclick = () => invDialog.close();
+    invDialog.addEventListener("click", (e) => { if (e.target === invDialog) invDialog.close(); });
+    invOpen.onclick = () => invDialog.showModal();
+    const invGood = (v) => !/expos/i.test(v || "");
     client.onUpdate(anyApi.metrics.findings, { limit: 12 }, (rows) => {
-      const link = (x) => /^https?:\/\//i.test(x.url || "") ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name.slice(0, 32))}</a>` : "";
-      findingsBody.innerHTML = rows.map((f) => `<tr>
-        <td>${esc(f.host)}<br><span class="muted">${esc(new Date(f.createdAt).toLocaleTimeString())}</span></td>
-        <td>${esc(RUN(f.outcome))}</td>
-        <td><span class="k ${SEV[f.severity] || "verdict"}">${esc(f.verdict)}</span><br><span class="muted">${esc(f.action)}</span></td>
-        <td>${esc(f.confidence)}</td>
-        <td>${f.steps.map((st) => esc(STEP[st.kind] || st.kind)).join(" → ")}<br><span class="muted">${f.calls} Linkup call${f.calls === 1 ? "" : "s"}${f.reused ? " · identity from memory" : ""}</span></td>
-        <td>${f.sources.slice(0, 2).map(link).filter(Boolean).join("<br>") || '<span class="muted">none</span>'}</td>
-      </tr>`).join("") || `<tr><td colspan="6" class="muted">no investigations yet</td></tr>`;
-    }, () => { findingsBody.innerHTML = `<tr><td colspan="6" class="muted">investigations are not deployed on this Convex deployment yet</td></tr>`; });
+      invOpen.disabled = rows.length === 0;
+      invCount.hidden = rows.length === 0;
+      invCount.textContent = String(rows.length);
+      const link = (x) => /^https?:\/\//i.test(x.url || "") ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name.slice(0, 28))}</a>` : "";
+      invList.innerHTML = rows.map((f) => {
+        const srcs = f.sources.slice(0, 3).map(link).filter(Boolean).join(" · ");
+        const steps = f.steps.map((st) => esc(STEP[st.kind] || st.kind)).join(" → ");
+        return `<div class="invcard">
+          <div class="invcard__top"><span class="invcard__host">${esc(f.host)}</span>
+            <span class="invcard__badge ${invGood(f.verdict) ? "invcard__badge--ok" : "invcard__badge--bad"}">${esc(f.verdict)}</span></div>
+          <p class="invcard__action">${esc(f.action)}</p>
+          <p class="invcard__meta">${esc(f.confidence)} · ${f.calls} Linkup call${f.calls === 1 ? "" : "s"}${f.reused ? " · identity from memory" : ""} · ${steps}</p>
+          ${srcs ? `<p class="invcard__src">sources: ${srcs}</p>` : ""}
+        </div>`;
+      }).join("") || `<p class="small muted">No investigations yet.</p>`;
+    }, () => { invOpen.disabled = true; invList.innerHTML = `<p class="small muted">Investigations are not deployed on this Convex deployment yet.</p>`; });
 
     client.onUpdate(anyApi.metrics.feed, { limit: 60 }, (rows) => {
       const srcPill = (e) => e.source ? ` <span class="src ${esc(e.source)}">${esc(e.source)}</span>` : "";

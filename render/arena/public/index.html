@@ -716,7 +716,7 @@ details.steps[open] > summary::before { content:"▾ "; }
       + '<div class="inv2__brand"><span class="inv2__logo"><img src="/assets/linkup.svg" alt=""></span>Traced with <b>Linkup</b></div>'
       + '<ol class="inv2__steps">' + steps + "</ol>"
       + '<div class="inv2__verdict" data-sev="' + esc(f.severity) + '">'
-        + '<div class="inv2__vtop"><span class="inv2__badge ' + (/contain/i.test(f.verdict || "") ? "inv2__badge--ok" : "inv2__badge--bad") + '">' + esc(f.verdict) + "</span>"
+        + '<div class="inv2__vtop"><span class="inv2__badge ' + (/expos/i.test(f.verdict || "") ? "inv2__badge--bad" : "inv2__badge--ok") + '">' + esc(f.verdict) + "</span>"
         + '<span class="inv2__meta">' + esc(f.severity) + " · " + esc(f.confidence) + " · " + calls + "</span></div>"
         + '<p class="inv2__action">' + esc(f.action) + "</p></div>"
       + '<p class="inv2__foot">Linkup decides how bad the incident is and what to do next, never the block.' + dash + "</p>"
