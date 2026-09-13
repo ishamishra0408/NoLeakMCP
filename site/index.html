@@ -20,7 +20,7 @@
 <script>
 /* Theme, applied before first paint so the choice never flashes. The control
    itself lives in the nav (System / Light / Dark); System writes no attribute. */
-(function () { try { var t = localStorage.getItem("nlm-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+(function () { try { var qp = new URLSearchParams(location.search).get("theme"); if (qp === "light" || qp === "dark") localStorage.setItem("nlm-theme", qp); else if (qp === "system") localStorage.removeItem("nlm-theme"); var t = localStorage.getItem("nlm-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); if (qp) { var u = new URL(location.href); u.searchParams.delete("theme"); history.replaceState(null, "", u.pathname + u.search + u.hash); } } catch (e) {} })();
 </script>
 <style>
 /* =============================================================================
@@ -945,6 +945,11 @@ body[data-slack-shot="1"] .figcap--shot { display:block; }
 .film__vid { display:block; width:100%; height:auto; border-radius:var(--r-s); background:#000; }
 .film--video { grid-template-columns:minmax(0,1fr); gap:var(--s-4); cursor:default; }
 .film--video:hover { border-color:var(--line); }
+.film__stage { position:relative; line-height:0; border-radius:var(--r-s); overflow:hidden; overflow:clip; }
+.film__cover { position:absolute; inset:0; padding:0; margin:0; border:0; cursor:pointer; background:var(--panel-2); }
+.film__cover[hidden] { display:none !important; }
+.film__cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+.film--video:hover .film__cover .film__play { transform:scale(1.06); background:var(--accent); color:var(--panel); }
 /* corner, not centre: centred it lands on the word "Leaked", which is the one
    word in the poster that has to survive at thumbnail size */
 .film__play { position:absolute; left:14px; bottom:14px; width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
@@ -960,42 +965,20 @@ body[data-slack-shot="1"] .figcap--shot { display:block; }
 /* --------------------------------------------------------------------------
    15b. .band — a dark full-bleed band inside a light page
    --------------------------------------------------------------------------
-   The narrative reads on a light ground; the PRODUCT is shown on dark, because
-   that is what a Slack client and a terminal actually look like and a light
-   screenshot of a dark tool reads as a mock-up. So one section forces the dark
-   token set on itself, in BOTH themes, and bleeds edge to edge. The tokens below
-   are the dark theme's own values, copied verbatim -- if you change the theme,
-   change these with it.
-   `color-scheme` is deliberately NOT set: it would recolour form controls inside
-   the band, and the band holds none. */
+   Bands are full-bleed content sections: the gap stats, the solution cards, the
+   FAQ, the tool marquee. They follow the active theme -- each inherits :root, so a
+   band is light in light mode and dark in dark mode. (This section once forced the
+   dark token set in both themes, back when a band held a dark product screenshot;
+   the bands are marketing content now, so that override is gone.) */
 .band {
-  --bg:#0b0e14; --bg-2:#0d1119; --panel:#141925; --panel-2:#0f1420;
-  --line:#232b3a; --line-strong:#6b788c;
-  --ink:#e6edf3; --dim:#8b98a9; --on-ink:#0b0e14; --ink-hover:#ffffff;
-  --accent:#58a6ff; --ok:#2ea043; --bad:#f85149; --amber:#d29922; --brass:#c8a96a;
-  --accent-soft:rgba(88,166,255,.10);
-  --ok-line:rgba(46,160,67,.8); --bad-line:rgba(248,81,73,.8);
-  --amber-line:rgba(210,153,34,.8); --brass-line:rgba(200,169,106,.7);
-  --focus:#c8a96a;
-  --grid-ink:rgba(230,237,243,.05);
-  --glow-a:rgba(88,166,255,.10); --glow-b:rgba(200,169,106,.07);
-  --glass-tint:rgba(20,25,37,.60); --glass-tint-thin:rgba(20,25,37,.46);
-  --glass-tint-clear:rgba(11,14,20,.22);
-  --glass-edge:rgba(255,255,255,.22); --glass-edge-lo:rgba(0,0,0,.40);
-  --glass-line:rgba(230,237,243,.13); --glass-fill:rgba(230,237,243,.06);
-  --glass-spec:rgba(255,255,255,.16);
-  --glass-shadow:0 10px 30px rgba(0,0,0,.45);
-  --shadow-1:0 12px 32px rgba(0,0,0,.5);
-  --shadow-seg:0 1px 2px rgba(0,0,0,.5);
-  --slack-bg:#1a1d21; --slack-line:#35373b; --slack-ink:#d1d2d3; --slack-dim:#ababad;
-  --slack-name:#ffffff;
-  --slack-av-a:#3b4048; --slack-av-b:#23272d; --slack-badge-bg:#35373b; --slack-badge-ink:#ababad;
-  --slack-mention:#1d9bd1; --slack-mention-bg:rgba(29,155,209,.16); --slack-app-a:#e0426a; --slack-app-b:#b8224a; --slack-app-ink:#ffffff;
   background:var(--bg);
   color:var(--ink);
   padding-block:var(--s-7);
 }
-.band + .band { padding-top:0; }
+/* Bands used to be dark islands, so consecutive ones dropped their top padding to
+   avoid a double gap. They now share the page background, so they need real space
+   between them to read as independent sections. */
+.band + .band { padding-top:var(--s-8); }
 /* the gap - a 2x2 threat-stat band (Okta-inspired), left-aligned above solutions */
 .gap__grid { display:grid; grid-template-columns:1fr; gap:var(--s-6) var(--s-5); margin-top:var(--s-6); justify-items:center; }
 @media (min-width:52em){ .gap__grid { grid-template-columns:repeat(3,1fr); } }
@@ -1137,7 +1120,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
         <li><a class="nav__link" href="#solutions" data-target="solutions">Our Solutions</a></li>
         <li><a class="nav__link" href="#faq" data-target="faq">FAQ</a></li>
         <li><a class="nav__link nav__link--ext" href="/arena">Arena</a></li>
-        <li><a class="nav__link" href="https://wary-herring-602.convex.site" data-dashboard-url="">Dashboard</a></li>
+        <li><a class="nav__link" href="https://wary-herring-602.convex.site" data-dashboard-url="" data-theme-link>Dashboard</a></li>
         <li><a class="nav__link" href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a></li>
         <li class="nav__theme">
           <!-- Icon-only on the bar (demoted per the 2026-09-08 review); the text
@@ -1191,7 +1174,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
 <section id="film" hidden>
   <div class="wrap">
     <a class="film reveal" id="filmLink" href="#" rel="noopener">
-      <span class="film__shot"><img src="/assets/demo-poster.png" width="1200" height="675" alt="Title card over the site: AI Assistant Exfiltration Attack, zero-click Slack payload injection." loading="lazy" decoding="async"><span class="film__play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12 8 5.2Z"/></svg></span></span>
+      <span class="film__shot"><img src="/assets/demo-poster.png?v=2" width="1280" height="720" alt="No-Leak-MCP shield logo. Detection is not defense." loading="lazy" decoding="async"><span class="film__play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12 8 5.2Z"/></svg></span></span>
       <span class="film__txt">
         <span class="eyebrow">Watch the demo</span>
         <span class="film__h">The message arrives, the keys leave, the attacker's server confirms it. Then the same run with the guard on.</span>
@@ -1289,7 +1272,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
   <div class="wrap foot">
     <a class="nav__brand" href="#top"><svg class="mark" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="m-o" d="M16 3.25 26.5 7.1v7.6c0 6.6-4.4 11.7-10.5 13.95C9.9 26.4 5.5 21.3 5.5 14.7V7.1Z" stroke-width="1.75"/><path class="m-i" d="M16 9v7.5" stroke-width="1.75"/><path class="m-i" d="M11.75 20h8.5" stroke-width="1.75"/></svg>No-Leak-MCP</a>
     <a href="https://github.com/ishamishra0408/NoLeakMCP" rel="noopener">GitHub</a>
-    <a href="https://wary-herring-602.convex.site" data-dashboard-url="">Dashboard</a>
+    <a href="https://wary-herring-602.convex.site" data-dashboard-url="" data-theme-link>Dashboard</a>
     <a href="/arena">Arena</a>
     <span class="r">MIT License · Isha Mishra and Devansh Pathak · Burning Token 2026</span>
   </div>
@@ -1361,6 +1344,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
         b.setAttribute("aria-checked", String(on));
         b.tabIndex = on ? 0 : -1;
       });
+      document.querySelectorAll("[data-theme-link]").forEach(function (a) { try { var u = new URL(a.href, location.href); if (v === "system") u.searchParams.delete("theme"); else u.searchParams.set("theme", v); a.href = u.href; } catch (e) {} });
       if (remember) { try { if (v === "system") localStorage.removeItem("nlm-theme"); else localStorage.setItem("nlm-theme", v); } catch (e) {} }
     }
     btns.forEach(function (b, i) {
@@ -1686,14 +1670,28 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     if (src) {
       var v = document.createElement("video");
       v.controls = true; v.preload = "none"; v.playsInline = true;
-      v.setAttribute("poster", "/assets/demo-poster.png");
+      v.setAttribute("poster", "/assets/demo-poster.png?v=2");
       v.src = "/assets/" + src;
       v.className = "film__vid";
-      // an <a> wrapping a <video> swallows the controls, so the anchor goes
-      var box = link.querySelector(".film__shot"), txt = link.querySelector(".film__txt");
+      var txt = link.querySelector(".film__txt");
       // A poster shares the row with the copy; a 1080p player should not. One column.
       var wrap = document.createElement("div"); wrap.className = "film film--video";
-      wrap.appendChild(v); if (txt) wrap.appendChild(txt);
+      var stage = document.createElement("div"); stage.className = "film__stage";
+      // A poster OVERLAY so the branded still shows whenever the video is not
+      // playing -- unplayed AND paused/ended. A native <video poster> only shows
+      // before the first play, so it cannot cover a paused frame on its own.
+      var cover = document.createElement("button");
+      cover.type = "button"; cover.className = "film__cover"; cover.setAttribute("aria-label", "Play the demo");
+      var pimg = document.createElement("img"); pimg.src = "/assets/demo-poster.png?v=2"; pimg.alt = "";
+      var pbtn = document.createElement("span"); pbtn.className = "film__play"; pbtn.setAttribute("aria-hidden", "true");
+      pbtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12 8 5.2Z"/></svg>';
+      cover.appendChild(pimg); cover.appendChild(pbtn);
+      cover.addEventListener("click", function () { v.play(); });
+      v.addEventListener("play", function () { cover.hidden = true; });
+      v.addEventListener("pause", function () { cover.hidden = false; });
+      v.addEventListener("ended", function () { cover.hidden = false; });
+      stage.appendChild(v); stage.appendChild(cover);
+      wrap.appendChild(stage); if (txt) wrap.appendChild(txt);
       link.parentNode.replaceChild(wrap, link);
       sec.hidden = false;
       return;
