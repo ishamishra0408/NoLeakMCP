@@ -1669,7 +1669,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
     var src = document.body.getAttribute("data-demo-film-src");
     if (src) {
       var v = document.createElement("video");
-      v.controls = true; v.preload = "none"; v.playsInline = true;
+      v.controls = true; v.preload = "metadata"; v.playsInline = true;
       v.setAttribute("poster", "/assets/demo-poster.png?v=2");
       v.src = "/assets/" + src;
       v.className = "film__vid";
@@ -1687,9 +1687,13 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       pbtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12 8 5.2Z"/></svg>';
       cover.appendChild(pimg); cover.appendChild(pbtn);
       cover.addEventListener("click", function () { v.play(); });
-      v.addEventListener("play", function () { cover.hidden = true; });
+      // Hide the poster only once frames are actually rendering ("playing"), not
+      // when play() is merely requested ("play") -- otherwise a preloading video
+      // shows a black gap. Bring it back on pause, end, or a re-buffer stall.
+      v.addEventListener("playing", function () { cover.hidden = true; });
       v.addEventListener("pause", function () { cover.hidden = false; });
       v.addEventListener("ended", function () { cover.hidden = false; });
+      v.addEventListener("waiting", function () { cover.hidden = false; });
       stage.appendChild(v); stage.appendChild(cover);
       wrap.appendChild(stage); if (txt) wrap.appendChild(txt);
       link.parentNode.replaceChild(wrap, link);
