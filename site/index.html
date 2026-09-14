@@ -1666,7 +1666,7 @@ footer { border-top:1px solid var(--line); padding:var(--s-5) 0 var(--s-6); font
       var v = document.createElement("video");
       v.controls = true; v.preload = "metadata"; v.playsInline = true;
       v.setAttribute("poster", "/assets/demo-poster.png?v=2");
-      v.src = "/assets/" + src;
+      v.src = "/assets/" + src + "?v=2";
       v.className = "film__vid";
       var txt = link.querySelector(".film__txt");
       // Plain native player. Safari does NOT paint a <video> that sits inside an
